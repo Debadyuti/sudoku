@@ -68,8 +68,8 @@ class UIRenderer:
         if frozen_cells is None:
             frozen_cells = set()
 
-        # Draw background
-        pygame.draw.rect(self.screen, (248, 248, 248), (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
+        # Draw background with subtle gradient effect
+        pygame.draw.rect(self.screen, (250, 250, 250), (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
 
         # Draw cells
         for i in range(9):
@@ -93,8 +93,16 @@ class UIRenderer:
                 color = self._get_cell_color(i, j, base_color)
                 pygame.draw.rect(self.screen, color, (x, y, CELL_SIZE, CELL_SIZE))
 
-                # Draw cell border (thin)
-                pygame.draw.rect(self.screen, (180, 180, 180), (x, y, CELL_SIZE, CELL_SIZE), 1)
+                # Draw subtle shadow on right/bottom for depth
+                if grid[i][j] != 0 or selected_cell == (i, j):
+                    shadow_color = (220, 220, 220)
+                    pygame.draw.line(self.screen, shadow_color, (x + CELL_SIZE - 1, y + 1), (x + CELL_SIZE - 1, y + CELL_SIZE - 1), 1)
+                    pygame.draw.line(self.screen, shadow_color, (x + 1, y + CELL_SIZE - 1), (x + CELL_SIZE - 1, y + CELL_SIZE - 1), 1)
+
+                # Draw cell border
+                border_color = (100, 100, 100) if selected_cell == (i, j) else (180, 180, 180)
+                border_width = 2 if selected_cell == (i, j) else 1
+                pygame.draw.rect(self.screen, border_color, (x, y, CELL_SIZE, CELL_SIZE), border_width)
 
                 # Draw number if present
                 if grid[i][j] != 0:
@@ -120,28 +128,28 @@ class UIRenderer:
                            thickness)
 
     def draw_buttons(self, mouse_pos):
-        """Draw control buttons in 2x2 grid with hover transitions.
+        """Draw control buttons in 2x2 grid with hover transitions and keyboard hints.
 
         Args:
             mouse_pos: (x, y) current mouse position
         """
         btn_configs = [
-            (pygame.Rect(BUTTON_X1, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT), "Finalize", GREEN, (100, 200, 100)),
-            (pygame.Rect(BUTTON_X2, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT), "Clear", RED, (255, 100, 100)),
-            (pygame.Rect(BUTTON_X1, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Algo", BLUE, (100, 160, 255)),
-            (pygame.Rect(BUTTON_X2, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Fast", CYAN, (100, 220, 255)),
+            (pygame.Rect(BUTTON_X1, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT), "Finalize", "F", GREEN, (100, 200, 100)),
+            (pygame.Rect(BUTTON_X2, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT), "Clear", "C", RED, (255, 100, 100)),
+            (pygame.Rect(BUTTON_X1, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Algo", "A", BLUE, (100, 160, 255)),
+            (pygame.Rect(BUTTON_X2, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Fast", "S", CYAN, (100, 220, 255)),
         ]
 
-        for btn, label, btn_color, hover_color in btn_configs:
+        for btn, label, shortcut, btn_color, hover_color in btn_configs:
             # Check if button is hovered
             is_hovered = btn.collidepoint(mouse_pos)
 
             # Smooth color interpolation on hover
             color = hover_color if is_hovered else btn_color
 
-            # Draw button shadow (3D effect, animate on hover)
-            shadow_offset = 4 if is_hovered else 3
-            shadow_color = (80, 80, 80) if is_hovered else (100, 100, 100)
+            # Draw button shadow (3D effect, larger on hover)
+            shadow_offset = 5 if is_hovered else 3
+            shadow_color = (60, 60, 60)
             pygame.draw.rect(self.screen, shadow_color,
                            (btn.x + shadow_offset, btn.y + shadow_offset, btn.width, btn.height))
 
@@ -149,14 +157,19 @@ class UIRenderer:
             pygame.draw.rect(self.screen, color, btn)
             pygame.draw.rect(self.screen, BLACK, btn, 2)
 
-            # Draw label (larger on hover)
-            font_size = 22 if is_hovered else 20
+            # Draw label (slightly larger on hover)
+            font_size = 20 if is_hovered else 19
             text = pygame.font.Font(None, font_size).render(label, True, WHITE)
-            text_rect = text.get_rect(center=btn.center)
+            text_rect = text.get_rect(center=(btn.centerx, btn.centery - 8))
             self.screen.blit(text, text_rect)
 
+            # Draw keyboard shortcut hint below label
+            hint_text = pygame.font.Font(None, 14).render(f"({shortcut})", True, (240, 240, 240))
+            hint_rect = hint_text.get_rect(center=(btn.centerx, btn.centery + 12))
+            self.screen.blit(hint_text, hint_rect)
+
     def draw_message(self, message, message_color):
-        """Draw status message with toast-style background.
+        """Draw status message with toast-style background and subtle animation.
 
         Args:
             message: Text message to display
@@ -164,12 +177,21 @@ class UIRenderer:
         """
         if message:
             text = FONT_SMALL.render(message, True, message_color)
-            # Draw background box
-            padding = 8
+            # Draw background box with better styling
+            padding = 10
             bg_rect = text.get_rect(topleft=(MARGIN, MESSAGE_Y))
             bg_rect.inflate_ip(2 * padding, 2 * padding)
-            pygame.draw.rect(self.screen, (245, 245, 245), bg_rect)
-            pygame.draw.rect(self.screen, (200, 200, 200), bg_rect, 1)
+
+            # Subtle shadow
+            shadow_rect = bg_rect.copy()
+            shadow_rect.x += 2
+            shadow_rect.y += 2
+            pygame.draw.rect(self.screen, (200, 200, 200), shadow_rect)
+
+            # Main background
+            pygame.draw.rect(self.screen, (248, 248, 250), bg_rect)
+            pygame.draw.rect(self.screen, (180, 180, 200), bg_rect, 2)
+
             # Draw text
             self.screen.blit(text, (MARGIN + padding, MESSAGE_Y + padding))
 
@@ -193,19 +215,22 @@ class UIRenderer:
 
         panel_x = MARGIN + GRID_SIZE + PANEL_GAP
         panel_y = GRID_TOP
-        padding = 10
-        bar_height = 16
+        padding = 12
+        bar_height = 18
         bar_width = PANEL_WIDTH - 2 * padding
 
         # Panel background and border
-        pygame.draw.rect(self.screen, (245, 245, 245), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE))
+        pygame.draw.rect(self.screen, (248, 248, 250), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE))
         pygame.draw.rect(self.screen, (100, 150, 200), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE), 2)
 
-        # Title (single line)
-        title = pygame.font.Font(None, 24).render("Algorithm Visualization", True, (25, 55, 135))
-        self.screen.blit(title, (panel_x + padding, panel_y + 12))
+        # Title (single line) with better styling
+        title_font = pygame.font.Font(None, 26)
+        title = title_font.render("Algorithm", True, (25, 55, 135))
+        subtitle = pygame.font.Font(None, 18).render("Visualization", True, (100, 130, 180))
+        self.screen.blit(title, (panel_x + padding, panel_y + 10))
+        self.screen.blit(subtitle, (panel_x + padding, panel_y + 32))
 
-        y_offset = panel_y + 45
+        y_offset = panel_y + 55
 
         # Current cell info (1,1-based indexing)
         if current_cell and (solving or show_final_panel):
