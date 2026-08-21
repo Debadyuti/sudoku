@@ -19,6 +19,7 @@ try:
     )
     from .solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from .ui import UIRenderer
+    from .menu import MenuSystem
 except ImportError:
     # Fallback for when imported via sys.path (from run.py)
     from constants import (
@@ -36,6 +37,7 @@ except ImportError:
     )
     from solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from ui import UIRenderer
+    from menu import MenuSystem
 
 class SudokuGame:
     def __init__(self):
@@ -45,6 +47,9 @@ class SudokuGame:
 
         # UI renderer
         self.ui = UIRenderer(self.screen)
+
+        # Menu system
+        self.menu = MenuSystem()
 
         # Game state
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
@@ -79,146 +84,73 @@ class SudokuGame:
         self.step_pulse_time = 0
         self.backtrack_pulse_time = 0
 
-        # Menu state
-        self.menu_open = None
-        self.menu_hover_index = -1
-        self.submenu_open = None
-        self.submenu_hover_index = -1
+    def _process_menu_action(self, action):
+        """Process menu action returned by MenuSystem.handle_click()"""
+        if action is True:  # Menu item clicked, menu state updated by MenuSystem
+            return
+        if action is False:  # Menu not involved
+            return
+        if not isinstance(action, tuple):
+            return
 
-    def update_menu_hover(self):
-        """Update menu hover state based on mouse position"""
-        x, y = self.mouse_pos
-
-        # Update menu hover if menu is open
-        if self.menu_open == 'FILE':
-            # Check if mouse is over submenu (New Puzzle submenu is at x >= 190)
-            if x >= 190 and y >= MENU_HEIGHT:
-                # Mouse is over submenu area - keep "New Puzzle" (index 0) highlighted
-                self.menu_hover_index = 0
-                self.submenu_hover_index = (y - MENU_HEIGHT) // 30
-            elif 10 < x < 190 and y >= MENU_HEIGHT:
-                # Mouse is over main menu items
-                self.menu_hover_index = (y - MENU_HEIGHT) // 30
-                self.submenu_hover_index = -1
-            else:
-                # Mouse is not over menu
-                self.menu_hover_index = -1
-                self.submenu_hover_index = -1
-        elif self.menu_open == 'EDIT':
-            if 65 < x < 215 and y >= MENU_HEIGHT:
-                self.menu_hover_index = (y - MENU_HEIGHT) // 30
-            else:
-                self.menu_hover_index = -1
-        else:
-            self.menu_hover_index = -1
-            self.submenu_hover_index = -1
-
-
-    def _handle_new_puzzle_click(self, difficulty_index):
-        """Handle New Puzzle submenu click (Easy=0, Medium=1, Hard=2)"""
+        action_type, item_index = action
         difficulties = ['easy', 'medium', 'hard']
-        if 0 <= difficulty_index < 3:
-            self._generate_new_puzzle(difficulties[difficulty_index])
 
-    def _handle_file_menu_click(self, item_index):
-        """Handle File menu item click"""
-        if item_index == 1:  # Load Puzzle
-            self._load_puzzle_dialog()
-        elif item_index == 2:  # Save Puzzle
-            self._save_puzzle_dialog()
-        elif item_index == 3:  # Exit
-            return False  # Will trigger quit in main loop
-
-    def _handle_edit_menu_click(self, item_index):
-        """Handle Edit menu item click"""
-        if item_index == 0:  # Clear Grid
-            self.clear_grid()
-            self.menu_open = None
-
-    def _load_puzzle_dialog(self):
-        """Simple load puzzle dialog"""
-        try:
-            # Try to load from default puzzles folder
-            puzzle_dir = Path('sudoku_puzzles')
-            puzzle_files = list(puzzle_dir.glob('*.json'))
-
-            if not puzzle_files:
-                self.message = "No puzzle files found in sudoku_puzzles/"
-                self.message_color = RED
-                return
-
-            # Load the most recent file
-            latest_file = max(puzzle_files, key=lambda p: p.stat().st_mtime)
-            puzzle, solution, difficulty, clues = load_puzzle(str(latest_file))
-
-            if puzzle is None:
-                self.message = "Error loading puzzle file"
-                self.message_color = RED
-                return
-
-            self.grid = puzzle
-            self.show_final_panel = False
-            self.solving = False
-            self.message = f"Puzzle loaded: {difficulty} ({clues} clues)"
-            self.message_color = GREEN
-        except Exception as e:
-            self.message = f"Error: {str(e)}"
-            self.message_color = RED
-
-    def _save_puzzle_dialog(self):
-        """Simple save puzzle dialog"""
-        try:
-            puzzle_dir = Path('sudoku_puzzles')
-            puzzle_dir.mkdir(exist_ok=True)
-
-            # Generate filename with timestamp
-            import datetime
-            filename = puzzle_dir / f"puzzle_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-
-            # Determine difficulty from clue count
-            clues = sum(1 for row in self.grid for cell in row if cell != 0)
-            if clues <= 20:
-                difficulty = 'easy'
-            elif clues <= 35:
-                difficulty = 'medium'
+        if action_type == 'new_puzzle':
+            # Generate puzzle for given difficulty
+            difficulty = difficulties[item_index] if item_index < 3 else 'medium'
+            puzzle, solution, msg, color = MenuSystem.generate_puzzle(difficulty)
+            if puzzle:
+                self.grid = puzzle
+                self.solution = solution
+                self.error_cells.clear()
+                self.selected_cell = (0, 0)
+                self.solving = False
+                self.show_final_panel = False
+                self.message = msg
+                self.message_color = color
             else:
-                difficulty = 'hard'
+                self.message = msg
+                self.message_color = color
+            self.menu.close_menu()
 
-            # For now, puzzle is solution (user hasn't solved yet)
-            solution = [row[:] for row in self.grid]
+        elif action_type == 'file_menu':
+            if item_index == 1:  # Load Puzzle
+                puzzle, solution, difficulty, clues, msg, color = MenuSystem.load_puzzle_file()
+                if puzzle:
+                    self.grid = puzzle
+                    self.solution = solution or puzzle
+                    self.show_final_panel = False
+                    self.solving = False
+                    self.error_cells.clear()
+                    self.message = msg
+                    self.message_color = color
+                else:
+                    self.message = msg
+                    self.message_color = color
+            elif item_index == 2:  # Save Puzzle
+                msg, color = MenuSystem.save_puzzle_file(self.grid, self.solution)
+                self.message = msg
+                self.message_color = color
+            elif item_index == 3:  # Exit
+                return False  # Signal to quit
+            self.menu.close_menu()
 
-            save_puzzle(self.grid, solution, difficulty, str(filename))
-            self.message = f"Puzzle saved: {filename.name}"
-            self.message_color = GREEN
-        except Exception as e:
-            self.message = f"Error saving: {str(e)}"
-            self.message_color = RED
-
-    def _generate_new_puzzle(self, difficulty):
-        """Generate a new puzzle of given difficulty"""
-        self.message = f"Generating {difficulty} puzzle..."
-        self.message_color = BLUE
-        pygame.display.flip()  # Show message immediately
-
-        puzzle, solution = generate_puzzle(difficulty)
-        self.grid = puzzle
-        self.solution = solution
-        self.error_cells = set()
-        self.selected_cell = (0, 0)
-        self.solving = False
-        self.show_final_panel = False
-
-        clue_count = sum(1 for row in puzzle for cell in row if cell != 0)
-        self.message = f"New {difficulty} puzzle generated! ({clue_count} clues)"
-        self.message_color = GREEN
-        self.waiting_for_difficulty = False
+        elif action_type == 'edit_menu':
+            if item_index == 0:  # Clear Grid
+                self.clear_grid()
+            self.menu.close_menu()
 
     def handle_click(self, pos):
         """Handle mouse click events"""
         x, y = pos
 
         # Check menu bar first
-        if self.handle_menu_click(pos):
+        menu_result = self.menu.handle_click(pos)
+        if menu_result is not False:
+            action = self._process_menu_action(menu_result)
+            if action is False:
+                return False  # Exit game
             return
 
         # Check if click is on grid
@@ -504,9 +436,9 @@ class SudokuGame:
                                         self.show_final_panel, self.solve_fast)
 
             # Update and draw menu dropdowns
-            self.update_menu_hover()
-            self.ui.draw_menu_dropdowns(self.menu_open, self.menu_hover_index,
-                                       self.submenu_hover_index, self.submenu_open)
+            self.menu.update_hover(self.mouse_pos)
+            self.ui.draw_menu_dropdowns(self.menu.menu_open, self.menu.menu_hover_index,
+                                       self.menu.submenu_hover_index, self.menu.submenu_open)
 
             pygame.display.flip()
             self.clock.tick(60)
