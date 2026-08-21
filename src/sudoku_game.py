@@ -84,6 +84,7 @@ class SudokuGame:
         self.solver_start_time = None  # milliseconds when solving started
         self.solver_pause_time = None  # accumulated pause time
         self.solver_total_pause = 0    # total pause accumulation
+        self.solver_final_time = None  # frozen time when solve completes (for display)
 
         # Input state
         self.mouse_pos = (0, 0)
@@ -236,6 +237,7 @@ class SudokuGame:
 
         if key == pygame.K_ESCAPE and self.solving:
             self.solving = False
+            self.solver_final_time = self.get_solver_elapsed_time()  # Freeze timer on stop
             self.message = "Solver stopped"
             self.message_color = RED
             self.current_cell = None
@@ -335,6 +337,8 @@ class SudokuGame:
         self.message = "Grid cleared!"
         self.message_color = BLUE
         self.show_final_panel = False
+        self.solver_start_time = None
+        self.solver_final_time = None
     
     def solve_puzzle(self, animated=True):
         """Start solving: animated step-by-step or fast"""
@@ -363,6 +367,7 @@ class SudokuGame:
         self.solver_start_time = pygame.time.get_ticks()
         self.solver_pause_time = None
         self.solver_total_pause = 0
+        self.solver_final_time = None  # Reset frozen time for new solve
 
         if animated:
             self.solver_gen = self._solve_with_steps()
@@ -376,6 +381,10 @@ class SudokuGame:
 
         Returns: elapsed milliseconds (int)
         """
+        # If solve is complete, return frozen final time
+        if self.solver_final_time is not None:
+            return self.solver_final_time
+
         if self.solver_start_time is None:
             return 0
 
@@ -445,9 +454,9 @@ class SudokuGame:
         self.solving = False
         self.error_cells.clear()
 
-        # Stop timer immediately for fast solve
+        # Freeze timer at final elapsed time (prevent further updates)
         if self.solver_start_time is not None:
-            self.solver_pause_time = 0  # Immediate stop (show minimal time)
+            self.solver_final_time = self.get_solver_elapsed_time()
 
     def _solve_with_steps(self):
         """Generator that yields after each solve step for animation"""
