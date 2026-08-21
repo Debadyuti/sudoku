@@ -18,7 +18,7 @@ A fully-featured Sudoku game built with Python and Pygame, featuring a clean UI,
 
 ### Prerequisites
 - Python 3.7 or higher
-- pip (Python package installer)
+- uv (Python package manager)
 
 ### Setup
 
@@ -26,12 +26,7 @@ A fully-featured Sudoku game built with Python and Pygame, featuring a clean UI,
 
 2. **Install dependencies**
    ```bash
-   pip install -r requirements.txt
-   ```
-
-   Or install pygame directly:
-   ```bash
-   pip install pygame
+   uv sync
    ```
 
 ## How to Run
@@ -40,6 +35,11 @@ Navigate to the project directory and run:
 
 ```bash
 python sudoku_game.py
+```
+
+Or with uv:
+```bash
+uv run python sudoku_game.py
 ```
 
 ## How to Play

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sudoku"
+version = "0.1.0"
+description = "A fully-featured Sudoku game built with Python and Pygame"
+requires-python = ">=3.7"
+authors = [
+    {name = "Created as a Python Pygame demonstration project"}
+]
+dependencies = [
+    "pygame==2.5.2"
+]
+
+[project.optional-dependencies]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sudoku_game.py"]
