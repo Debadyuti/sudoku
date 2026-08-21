@@ -738,10 +738,12 @@ class SudokuGame:
                 if self.solving or self.show_final_panel:
                     elapsed_ms = self.get_solver_elapsed_time()
                     elapsed_str = self.format_solver_time(elapsed_ms)
+                    extended_stats = self._get_extended_stats() if self.show_final_panel else None
                     self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
                                             self.candidates, self.solving, self.solve_paused,
                                             self.show_final_panel, self.solve_fast, elapsed_str,
-                                            self.step_pulse_time, self.backtrack_pulse_time, self.step_delay)
+                                            self.step_pulse_time, self.backtrack_pulse_time, self.step_delay,
+                                            extended_stats)
 
                 # Update and draw menu dropdowns
                 self.menu.update_hover(self.mouse_pos)

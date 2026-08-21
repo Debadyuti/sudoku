@@ -247,7 +247,7 @@ class UIRenderer:
 
     def draw_solver_panel(self, backtrack_count, step_count, current_cell, candidates,
                          solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s",
-                         step_pulse_time=0, backtrack_pulse_time=0, step_delay=300):
+                         step_pulse_time=0, backtrack_pulse_time=0, step_delay=300, extended_stats=None):
         """Draw algorithm visualization panel with metrics and animations.
 
         Args:
@@ -364,6 +364,37 @@ class UIRenderer:
                 candidates_str = " ".join(map(str, sorted(candidates)))
                 cand_text = pygame.font.Font(None, 26).render(candidates_str, True, BLUE)
                 self.screen.blit(cand_text, (panel_x + padding, y_offset))
+
+        # Extended statistics display (Phase 6.2: shown when solve completes)
+        if show_final_panel and extended_stats and y_offset < max_content_y:
+            y_offset += 30  # Spacing from previous content
+
+            # Statistics section title
+            stats_label = pygame.font.Font(None, 20).render("Statistics:", True, (66, 66, 66))
+            if y_offset + 20 < max_content_y:
+                self.screen.blit(stats_label, (panel_x + padding, y_offset))
+                y_offset += 25
+
+                # Difficulty
+                diff = extended_stats.get('difficulty', 'Unknown')
+                diff_text = pygame.font.Font(None, 18).render(f"Difficulty: {diff.capitalize()}", True, (100, 100, 100))
+                if y_offset + 18 < max_content_y:
+                    self.screen.blit(diff_text, (panel_x + padding, y_offset))
+                    y_offset += 22
+
+                # Time (already shown at bottom, but can add here for completeness)
+                time_sec = extended_stats.get('time_sec', 0)
+                time_text = pygame.font.Font(None, 18).render(f"Solving Time: {time_sec:.2f}s", True, (100, 100, 100))
+                if y_offset + 18 < max_content_y:
+                    self.screen.blit(time_text, (panel_x + padding, y_offset))
+                    y_offset += 22
+
+                # Progress percentage
+                progress = extended_stats.get('progress', 0)
+                progress_text = pygame.font.Font(None, 18).render(f"Progress: {progress:.1f}%", True, (100, 100, 100))
+                if y_offset + 18 < max_content_y:
+                    self.screen.blit(progress_text, (panel_x + padding, y_offset))
+                    y_offset += 22
 
         # Status and Timer at FIXED bottom (never move)
         status_y = panel_y + GRID_SIZE - 90
