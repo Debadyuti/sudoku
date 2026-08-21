@@ -13,7 +13,7 @@ pygame.init()
 # Window Dimensions & Layout
 # ============================================================================
 
-WIDTH = 900
+WIDTH = 920
 HEIGHT = 800  # Accommodates menu bar (30px) + grid + buttons + panel
 
 # Menu bar
@@ -24,8 +24,8 @@ MENU_BAR_Y = 0
 GRID_SIZE = 540
 CELL_SIZE = GRID_SIZE // 9
 MARGIN = 30
-PANEL_WIDTH = 260  # Right panel for algorithm visualization
-PANEL_GAP = 15    # Gap between grid and panel
+PANEL_WIDTH = 290  # Right panel for algorithm visualization
+PANEL_GAP = 10    # Gap between grid and panel
 
 # Derived layout constants (all shifted down 30px for menu bar)
 GRID_TOP = MARGIN + MENU_HEIGHT            # 60

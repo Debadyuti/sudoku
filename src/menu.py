@@ -6,6 +6,8 @@ Menu state management, interaction handling, and puzzle file operations.
 
 import pygame
 from pathlib import Path
+import tkinter as tk
+from tkinter import filedialog
 
 try:
     from .constants import MENU_HEIGHT, RED, GREEN, BLUE
@@ -120,19 +122,27 @@ class MenuSystem:
 
     @staticmethod
     def load_puzzle_file():
-        """Load puzzle from file.
+        """Load puzzle from file using Windows file dialog.
 
         Returns: (puzzle_grid, solution_grid, difficulty, clues, frozen_cells, message, message_color)
         """
         try:
-            puzzle_dir = Path('sudoku_puzzles')
-            puzzle_files = list(puzzle_dir.glob('*.json'))
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
 
-            if not puzzle_files:
-                return None, None, None, None, None, "No puzzle files found in sudoku_puzzles/", RED
+            filepath = filedialog.askopenfilename(
+                title="Load Puzzle",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                initialdir=str(Path('sudoku_puzzles').resolve() if Path('sudoku_puzzles').exists() else Path.home())
+            )
 
-            latest_file = max(puzzle_files, key=lambda p: p.stat().st_mtime)
-            puzzle, solution, difficulty, clues, frozen_cells = load_puzzle(str(latest_file))
+            root.destroy()
+
+            if not filepath:
+                return None, None, None, None, None, "Load cancelled", BLUE
+
+            puzzle, solution, difficulty, clues, frozen_cells = load_puzzle(filepath)
 
             if puzzle is None:
                 return None, None, None, None, None, "Error loading puzzle file", RED
@@ -144,7 +154,7 @@ class MenuSystem:
 
     @staticmethod
     def save_puzzle_file(grid, puzzle_solution=None, frozen_cells=None):
-        """Save puzzle to file.
+        """Save puzzle to file using Windows file dialog.
 
         Args:
             grid: Current grid (puzzle state)
@@ -154,11 +164,31 @@ class MenuSystem:
         Returns: (message, message_color)
         """
         try:
+            root = tk.Tk()
+            root.withdraw()
+            root.attributes('-topmost', True)
+
             puzzle_dir = Path('sudoku_puzzles')
             puzzle_dir.mkdir(exist_ok=True)
 
             import datetime
-            filename = puzzle_dir / f"puzzle_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            default_name = f"puzzle_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+            filepath = filedialog.asksaveasfilename(
+                title="Save Puzzle",
+                filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+                initialfile=default_name,
+                initialdir=str(puzzle_dir.resolve())
+            )
+
+            root.destroy()
+
+            if not filepath:
+                return "Save cancelled", BLUE
+
+            # Ensure .json extension
+            if not filepath.endswith('.json'):
+                filepath += '.json'
 
             # Determine difficulty from clue count
             clues = sum(1 for row in grid for cell in row if cell != 0)
@@ -170,8 +200,8 @@ class MenuSystem:
                 difficulty = 'hard'
 
             solution = puzzle_solution if puzzle_solution else [row[:] for row in grid]
-            save_puzzle(grid, solution, difficulty, str(filename), frozen_cells)
+            save_puzzle(grid, solution, difficulty, filepath, frozen_cells)
 
-            return f"Puzzle saved: {filename.name}", GREEN
+            return f"Puzzle saved: {Path(filepath).name}", GREEN
         except Exception as e:
             return f"Error saving: {str(e)}", RED

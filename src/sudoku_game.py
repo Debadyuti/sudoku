@@ -326,6 +326,7 @@ class SudokuGame:
     def clear_grid(self):
         """Clear the entire grid"""
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
+        self.frozen_cells.clear()
         self.selected_cell = (0, 0)  # Auto-select top-left
         self.error_cells.clear()
         self.message = "Grid cleared!"

@@ -198,34 +198,28 @@ class TestPuzzleGeneration:
 class TestPuzzleFileIO:
     """Test file I/O via MenuSystem."""
 
-    def test_save_puzzle_file(self, tmp_path):
-        """Test saving puzzle via MenuSystem."""
+    def test_save_puzzle_file_direct(self, tmp_path):
+        """Test saving puzzle directly without file dialog."""
         grid = [[i + 1 if j == 0 else 0 for j in range(9)] for i in range(9)]
-        # Change working directory temporarily for this test
-        import os
+        solution = [[i + 1 for j in range(9)] for i in range(9)]
+        filepath = tmp_path / "test_puzzle.json"
 
-        old_cwd = os.getcwd()
-        try:
-            os.chdir(tmp_path)
-            msg, color = MenuSystem.save_puzzle_file(grid)
-            assert "saved" in msg.lower()
-        finally:
-            os.chdir(old_cwd)
+        from solver import save_puzzle
+        save_puzzle(grid, solution, "medium", str(filepath))
+        assert filepath.exists()
 
-    def test_load_puzzle_empty_directory(self, tmp_path):
-        """Test loading puzzle when no files exist."""
-        import os
+    def test_load_puzzle_direct(self, tmp_path):
+        """Test loading puzzle directly without file dialog."""
+        from solver import generate_puzzle, save_puzzle, load_puzzle
 
-        old_cwd = os.getcwd()
-        try:
-            os.chdir(tmp_path)
-            puzzle, solution, difficulty, clues, frozen_cells, msg, color = (
-                MenuSystem.load_puzzle_file()
-            )
-            assert puzzle is None
-            assert "found" in msg.lower()  # "No puzzle files found..."
-        finally:
-            os.chdir(old_cwd)
+        puzzle, solution = generate_puzzle("medium")
+        filepath = tmp_path / "test_puzzle.json"
+        save_puzzle(puzzle, solution, "medium", str(filepath))
+
+        loaded_puzzle, loaded_solution, difficulty, clues, frozen_cells = load_puzzle(str(filepath))
+        assert loaded_puzzle == puzzle
+        assert loaded_solution == solution
+        assert difficulty == "medium"
 
 
 class TestMenuIntegration:
