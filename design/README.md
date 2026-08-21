@@ -2,14 +2,34 @@
 
 This folder contains design-related documentation and technical notes.
 
-## Files
+## Quick Navigation
 
-### Design & UI Notes
+**New to the project?** Start here:
+1. Read: `README.md` (this file) - Overview
+2. Check: `NAVIGATION_GUIDE.md` - Where to find everything
+3. See: Root `README.md` - Project overview
+4. Run: `uv run src/sudoku_game.py` - Start the game
+
+**Need specific information?** Use `NAVIGATION_GUIDE.md` for quick links.
+
+## Files in This Folder
+
+### Navigation & Overview
+- **NAVIGATION_GUIDE.md** - Complete navigation map for all documentation
+  - Directory structure reference
+  - Quick links by task
+  - File organization summary
+  - Where to find what
+
+### Design & UI Technical Notes
 - **TEXT_SELECTION_NOTES.md** - Technical notes on text selection in Pygame
   - Current status: Pygame renders text as bitmaps (not selectable)
   - Workarounds: Ctrl+C to copy, or pygame-gui integration
   - Recommendation: Current Ctrl+C approach is optimal
   - Implementation details for future enhancement
+
+### Legacy Documentation
+- Various enhancement logs and quick start guides from development phases
 
 ## Design Decisions
 

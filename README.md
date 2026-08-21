@@ -2,7 +2,16 @@
 
 A fully-featured Sudoku game built with Python and Pygame, featuring a modern UI with smooth animations, user input validation, error highlighting, and an educational algorithm visualizer.
 
-📚 **Complete Documentation**: See [design/README.md](./design/README.md) for detailed design docs, user guides, and algorithm analysis.
+## 📚 Documentation Hub
+
+| Category | Location | Purpose |
+|----------|----------|---------|
+| **Navigation** | [design/NAVIGATION_GUIDE.md](./design/NAVIGATION_GUIDE.md) | Find what you need quickly |
+| **Design Docs** | [design/README.md](./design/README.md) | Colors, animations, UI decisions |
+| **Testing** | [tests/procedures/README.md](./tests/procedures/README.md) | Phase 5 testing procedures |
+| **Project Status** | [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) | Complete project report |
+| **Code Guidelines** | [AGENTS.md](./AGENTS.md) | Style and architecture |
+| **Quick Start** | Below | Get playing in 30 seconds |
 
 ## Features
 
@@ -51,7 +60,7 @@ uv run python run.py
 
 ## Testing
 
-The project includes a comprehensive test suite covering the solver algorithm and menu system.
+The project includes a comprehensive test suite with 122 unit tests covering all modules.
 
 ### Run All Tests
 
@@ -61,10 +70,21 @@ uv run pytest tests/ -v
 
 ### Test Coverage
 
-- **58 tests** covering solver algorithm and menu system
-- **~95% coverage** on solver.py (28 tests)
-- **~90% coverage** on menu.py (30 tests)
-- Execution time: ~0.9 seconds
+- **122 tests** covering all modules (Phase 5 automated testing)
+  - `test_animations.py` - 24 tests (animations and easing)
+  - `test_color_palette.py` - 16 tests (Material Design colors)
+  - `test_game.py` - 22 tests (game logic and state)
+  - `test_menu.py` - 30 tests (menu system and file I/O)
+  - `test_solver.py` - 30 tests (solver algorithms and puzzle generation)
+- **100% pass rate** across all tests
+- Execution time: ~2 seconds
+
+### Phase 5 Testing
+
+For comprehensive Phase 5 testing procedures (manual testing with visual verification):
+- **Start**: [tests/procedures/PHASE5_QUICK_START.txt](./tests/procedures/PHASE5_QUICK_START.txt) (5 min read)
+- **Detailed**: [tests/procedures/PHASE5_TESTING.md](./tests/procedures/PHASE5_TESTING.md) (360+ lines)
+- **Track Results**: [tests/procedures/PHASE5_TESTING_RESULTS.md](./tests/procedures/PHASE5_TESTING_RESULTS.md)
 
 ### Run Specific Tests
 
@@ -75,11 +95,11 @@ uv run pytest tests/test_solver.py -v
 # Run only menu tests
 uv run pytest tests/test_menu.py -v
 
+# Run animation tests
+uv run pytest tests/test_animations.py -v
+
 # Run a specific test class
 uv run pytest tests/test_solver.py::TestSudokuSolver -v
-
-# Run a specific test
-uv run pytest tests/test_solver.py::TestSudokuSolver::test_solver_initialization -v
 ```
 
 See [tests/README.md](./tests/README.md) for detailed test documentation.
@@ -354,6 +374,52 @@ The application runs at 60 FPS. If you experience lag:
 - [ ] Difficulty analyzer (auto-detect puzzle difficulty)
 - [ ] Puzzle database (library of famous puzzles)
 - [ ] Web version (Tauri or web framework)
+
+## Project Documentation Structure
+
+```
+C:\BOB\sudoku\
+├── design/                          # Design & UI Documentation
+│   ├── NAVIGATION_GUIDE.md          # Where to find everything
+│   ├── README.md                    # Design overview
+│   └── TEXT_SELECTION_NOTES.md      # UI technical notes
+│
+├── tests/procedures/                # Phase 5 Testing Documentation
+│   ├── PHASE5_QUICK_START.txt       # 5-minute quick reference
+│   ├── PHASE5_TESTING.md            # Detailed procedures (360+ lines)
+│   ├── PHASE5_TESTING_RESULTS.md    # Results tracker
+│   └── PHASE5_EXECUTION_SUMMARY.md  # Overview
+│
+├── docs/                            # Project Status & Reports
+│   ├── PROJECT_STATUS.md            # Complete project report
+│   └── README.md                    # Documentation index
+│
+├── src/                             # Source Code
+│   ├── sudoku_game.py               # Main game logic
+│   ├── ui.py                        # UI rendering
+│   ├── solver.py                    # Solver algorithms
+│   ├── menu.py                      # Menu system
+│   └── constants.py                 # Constants and utilities
+│
+├── tests/                           # Test Suite (122 tests)
+│   ├── test_*.py                    # Unit tests
+│   ├── procedures/                  # Phase 5 testing docs
+│   └── README.md                    # Testing overview
+│
+├── CLAUDE.md                        # Project instructions
+├── AGENTS.md                        # Code style guidelines
+└── README.md                        # This file
+```
+
+### Quick Links by Task
+
+**I want to...**
+- **Play the game**: Run `uv run src/sudoku_game.py` (see "How to Run" above)
+- **Test Phase 5**: Start with [tests/procedures/PHASE5_QUICK_START.txt](./tests/procedures/PHASE5_QUICK_START.txt)
+- **Understand design**: See [design/README.md](./design/README.md)
+- **Check project status**: See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)
+- **Find documentation**: See [design/NAVIGATION_GUIDE.md](./design/NAVIGATION_GUIDE.md)
+- **Learn code guidelines**: See [AGENTS.md](./AGENTS.md)
 
 ## License
 
