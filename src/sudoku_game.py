@@ -76,6 +76,7 @@ class SudokuGame:
         self.step_time = 0
         self.step_delay = 300
         self.show_final_panel = False
+        self.waiting_for_difficulty = False
 
         # Input state
         self.mouse_pos = (0, 0)
