@@ -188,6 +188,21 @@ class SudokuGame:
     
     def handle_key(self, key, mod=0):
         """Handle keyboard input"""
+        # --- Button shortcuts (F=Finalize, C=Clear, A=Algo, S=SolveFast) ---
+        if key == pygame.K_f:  # Finalize
+            self.finalize_entry()
+            return
+        elif key == pygame.K_c:  # Clear
+            if not (mod & pygame.KMOD_CTRL):  # Not Ctrl+C
+                self.clear_grid()
+                return
+        elif key == pygame.K_a:  # Solve Algo
+            self.solve_puzzle(animated=True)
+            return
+        elif key == pygame.K_s:  # Solve Fast
+            self.solve_puzzle(animated=False)
+            return
+
         # --- Copy stats with Ctrl+C ---
         if (mod & pygame.KMOD_CTRL) and key == pygame.K_c:
             if self.solving or self.show_final_panel:
