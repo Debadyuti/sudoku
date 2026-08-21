@@ -61,6 +61,8 @@ DARK_GRAY = (128, 128, 128)
 LIGHT_BLUE = (173, 216, 230)     # Selected cell
 LIGHT_RED = (255, 182, 193)      # Error cell
 SOFT_YELLOW = (255, 250, 200)    # Solving cell
+FROZEN_BG = (230, 230, 230)      # Frozen cell background (greyed out)
+FROZEN_TEXT = (30, 144, 255)     # Frozen cell text (blue)
 
 # Button colors
 GREEN = (34, 139, 34)             # Finalize (hover: #64C864)

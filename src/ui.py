@@ -18,7 +18,7 @@ try:
         BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
         PANEL_X, PANEL_Y, PANEL_HEIGHT,
         WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
-        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW, FROZEN_BG, FROZEN_TEXT,
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
@@ -33,7 +33,7 @@ except ImportError:
         BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
         PANEL_X, PANEL_Y, PANEL_HEIGHT,
         WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
-        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW, FROZEN_BG, FROZEN_TEXT,
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
@@ -54,7 +54,7 @@ class UIRenderer:
         self.cell_animations = {}  # Track animations for each cell
         self.button_rects = {}  # Cache button rectangles
 
-    def draw_grid(self, grid, selected_cell, solving_cell, error_cells, solving_mode=False):
+    def draw_grid(self, grid, selected_cell, solving_cell, error_cells, solving_mode=False, frozen_cells=None):
         """Draw the Sudoku grid with enhanced visuals and animations.
 
         Args:
@@ -63,7 +63,11 @@ class UIRenderer:
             solving_cell: (row, col) of current solver cell or None
             error_cells: Set of (row, col) with conflicts
             solving_mode: True if solver is actively running
+            frozen_cells: Set of (row, col) with immutable initial cells
         """
+        if frozen_cells is None:
+            frozen_cells = set()
+
         # Draw background
         pygame.draw.rect(self.screen, (248, 248, 248), (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
 
@@ -74,7 +78,9 @@ class UIRenderer:
                 y = GRID_TOP + i * CELL_SIZE
 
                 # Determine base color
-                if solving_mode and solving_cell == (i, j):
+                if (i, j) in frozen_cells:
+                    base_color = FROZEN_BG
+                elif solving_mode and solving_cell == (i, j):
                     base_color = SOFT_YELLOW
                 elif selected_cell == (i, j):
                     base_color = LIGHT_BLUE
@@ -92,7 +98,8 @@ class UIRenderer:
 
                 # Draw number if present
                 if grid[i][j] != 0:
-                    text = FONT_MEDIUM.render(str(grid[i][j]), True, BLACK)
+                    text_color = FROZEN_TEXT if (i, j) in frozen_cells else BLACK
+                    text = FONT_MEDIUM.render(str(grid[i][j]), True, text_color)
                     text_rect = text.get_rect(center=(x + CELL_SIZE // 2, y + CELL_SIZE // 2))
                     self.screen.blit(text, text_rect)
 
@@ -166,19 +173,20 @@ class UIRenderer:
             # Draw text
             self.screen.blit(text, (MARGIN + padding, MESSAGE_Y + padding))
 
-    def draw_solver_panel(self, step_count, backtrack_count, current_cell, candidates,
-                         solving, solve_paused, show_final_panel, solve_fast):
+    def draw_solver_panel(self, backtrack_count, step_count, current_cell, candidates,
+                         solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s"):
         """Draw algorithm visualization panel with metrics.
 
         Args:
-            step_count: Number of steps taken
             backtrack_count: Number of backtracks
+            step_count: Number of steps taken
             current_cell: (row, col) or None
             candidates: List of valid candidates
             solving: True if solver is active
             solve_paused: True if solver is paused
             show_final_panel: True if showing final results
             solve_fast: True if fast solve mode used
+            elapsed_time: Formatted elapsed time string (e.g. "1m 23s")
         """
         if not solving and not show_final_panel:
             return
@@ -211,22 +219,7 @@ class UIRenderer:
             self.screen.blit(cell_text, (panel_x + padding + 10, y_offset))
             y_offset += 40
 
-        # Steps metric
-        steps_label = pygame.font.Font(None, 20).render("Steps:", True, (66, 66, 66))
-        self.screen.blit(steps_label, (panel_x + padding, y_offset))
-        steps_value = pygame.font.Font(None, 24).render(str(step_count), True, GREEN)
-        steps_rect = steps_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
-        self.screen.blit(steps_value, steps_rect)
-        y_offset += 28
-
-        # Steps progress bar
-        max_steps = 200
-        steps_pct = min(1.0, step_count / max_steps)
-        draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
-                         steps_pct, GREEN, (220, 240, 220))
-        y_offset += 32
-
-        # Backtracks metric
+        # Backtracks metric (now first, reversed order)
         back_label = pygame.font.Font(None, 20).render("Backtracks:", True, (66, 66, 66))
         self.screen.blit(back_label, (panel_x + padding, y_offset))
         back_value = pygame.font.Font(None, 24).render(str(backtrack_count), True, ORANGE)
@@ -239,6 +232,21 @@ class UIRenderer:
         backtrack_pct = min(1.0, backtrack_count / max_backtracks)
         draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
                          backtrack_pct, ORANGE, (255, 230, 200))
+        y_offset += 32
+
+        # Steps metric (now second, reversed order)
+        steps_label = pygame.font.Font(None, 20).render("Steps:", True, (66, 66, 66))
+        self.screen.blit(steps_label, (panel_x + padding, y_offset))
+        steps_value = pygame.font.Font(None, 24).render(str(step_count), True, GREEN)
+        steps_rect = steps_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
+        self.screen.blit(steps_value, steps_rect)
+        y_offset += 28
+
+        # Steps progress bar
+        max_steps = 200
+        steps_pct = min(1.0, step_count / max_steps)
+        draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
+                         steps_pct, GREEN, (220, 240, 220))
         y_offset += 38
 
         # Candidates section
@@ -265,9 +273,17 @@ class UIRenderer:
         status_text = pygame.font.Font(None, 22).render(status, True, status_color)
         self.screen.blit(status_text, (panel_x + padding, y_offset))
 
+        # Timer at bottom
+        timer_label = pygame.font.Font(None, 18).render("Time:", True, (66, 66, 66))
+        self.screen.blit(timer_label, (panel_x + padding, y_offset))
+        timer_value = pygame.font.Font(None, 22).render(elapsed_time, True, BLUE)
+        timer_rect = timer_value.get_rect(topleft=(panel_x + padding + 70, y_offset))
+        self.screen.blit(timer_value, timer_rect)
+        y_offset += 32
+
         # Info text at bottom
-        info_font = pygame.font.Font(None, 16)
-        info_y = panel_y + GRID_SIZE - 85
+        info_font = pygame.font.Font(None, 14)
+        info_y = panel_y + GRID_SIZE - 60
 
         if show_final_panel:
             info_lines = ["Click any button", "to close panel"]
@@ -277,7 +293,7 @@ class UIRenderer:
         for line in info_lines:
             info_text = info_font.render(line, True, (100, 100, 100))
             self.screen.blit(info_text, (panel_x + padding, info_y))
-            info_y += 18
+            info_y += 16
 
     def draw_menu_bar(self):
         """Draw menu bar background and text."""

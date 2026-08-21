@@ -90,7 +90,7 @@ def generate_puzzle(difficulty='medium'):
     return puzzle, solution
 
 
-def save_puzzle(puzzle, solution, difficulty, filepath):
+def save_puzzle(puzzle, solution, difficulty, filepath, frozen_cells=None):
     """Save puzzle to JSON file.
 
     Args:
@@ -98,6 +98,7 @@ def save_puzzle(puzzle, solution, difficulty, filepath):
         solution: 9x9 grid with complete solution
         difficulty: 'easy', 'medium', or 'hard'
         filepath: path to save file
+        frozen_cells: set of (row, col) tuples for initial/immutable cells
     """
     import datetime
 
@@ -109,6 +110,10 @@ def save_puzzle(puzzle, solution, difficulty, filepath):
         'created': datetime.datetime.now().isoformat()
     }
 
+    # Save frozen cells as sorted list for JSON serialization
+    if frozen_cells:
+        data['frozen_cells'] = sorted(list(frozen_cells))
+
     Path(filepath).parent.mkdir(parents=True, exist_ok=True)
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=2)
@@ -117,7 +122,7 @@ def save_puzzle(puzzle, solution, difficulty, filepath):
 def load_puzzle(filepath):
     """Load puzzle from JSON file.
 
-    Returns: (puzzle_grid, solution_grid, difficulty, clues_count) or (None, None, None, None) on error
+    Returns: (puzzle_grid, solution_grid, difficulty, clues_count, frozen_cells) or (None, None, None, None, None) on error
     """
     try:
         with open(filepath, 'r') as f:
@@ -125,17 +130,22 @@ def load_puzzle(filepath):
 
         # Validate data
         if not isinstance(data.get('puzzle'), list) or len(data['puzzle']) != 9:
-            return None, None, None, None
+            return None, None, None, None, None
 
         puzzle = data['puzzle']
         solution = data.get('solution', puzzle)  # Fallback if no solution
         difficulty = data.get('difficulty', 'unknown')
         clues = data.get('clues', sum(1 for row in puzzle for cell in row if cell != 0))
 
-        return puzzle, solution, difficulty, clues
+        # Load frozen cells (convert from list back to set of tuples)
+        frozen_cells = set()
+        if 'frozen_cells' in data:
+            frozen_cells = set(tuple(cell) for cell in data['frozen_cells'])
+
+        return puzzle, solution, difficulty, clues, frozen_cells
     except Exception as e:
         print(f"Error loading puzzle: {e}")
-        return None, None, None, None
+        return None, None, None, None, None
 
 
 class SudokuSolver:

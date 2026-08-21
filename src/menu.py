@@ -122,33 +122,34 @@ class MenuSystem:
     def load_puzzle_file():
         """Load puzzle from file.
 
-        Returns: (puzzle_grid, solution_grid, difficulty, clues, message, message_color)
+        Returns: (puzzle_grid, solution_grid, difficulty, clues, frozen_cells, message, message_color)
         """
         try:
             puzzle_dir = Path('sudoku_puzzles')
             puzzle_files = list(puzzle_dir.glob('*.json'))
 
             if not puzzle_files:
-                return None, None, None, None, "No puzzle files found in sudoku_puzzles/", RED
+                return None, None, None, None, None, "No puzzle files found in sudoku_puzzles/", RED
 
             latest_file = max(puzzle_files, key=lambda p: p.stat().st_mtime)
-            puzzle, solution, difficulty, clues = load_puzzle(str(latest_file))
+            puzzle, solution, difficulty, clues, frozen_cells = load_puzzle(str(latest_file))
 
             if puzzle is None:
-                return None, None, None, None, "Error loading puzzle file", RED
+                return None, None, None, None, None, "Error loading puzzle file", RED
 
             message = f"Puzzle loaded: {difficulty} ({clues} clues)"
-            return puzzle, solution, difficulty, clues, message, GREEN
+            return puzzle, solution, difficulty, clues, frozen_cells, message, GREEN
         except Exception as e:
-            return None, None, None, None, f"Error: {str(e)}", RED
+            return None, None, None, None, None, f"Error: {str(e)}", RED
 
     @staticmethod
-    def save_puzzle_file(grid, puzzle_solution=None):
+    def save_puzzle_file(grid, puzzle_solution=None, frozen_cells=None):
         """Save puzzle to file.
 
         Args:
             grid: Current grid (puzzle state)
             puzzle_solution: Optional solution grid (defaults to current grid as solution)
+            frozen_cells: Set of (row, col) tuples for initial/immutable cells
 
         Returns: (message, message_color)
         """
@@ -169,7 +170,7 @@ class MenuSystem:
                 difficulty = 'hard'
 
             solution = puzzle_solution if puzzle_solution else [row[:] for row in grid]
-            save_puzzle(grid, solution, difficulty, str(filename))
+            save_puzzle(grid, solution, difficulty, str(filename), frozen_cells)
 
             return f"Puzzle saved: {filename.name}", GREEN
         except Exception as e:

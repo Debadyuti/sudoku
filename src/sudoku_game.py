@@ -11,7 +11,7 @@ try:
         BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
         PANEL_X, PANEL_Y, PANEL_HEIGHT,
         WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
-        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW, FROZEN_BG, FROZEN_TEXT,
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
@@ -29,7 +29,7 @@ except ImportError:
         BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
         PANEL_X, PANEL_Y, PANEL_HEIGHT,
         WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
-        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW, FROZEN_BG, FROZEN_TEXT,
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
@@ -56,6 +56,7 @@ class SudokuGame:
         self.solution = [[0 for _ in range(9)] for _ in range(9)]
         self.selected_cell = (0, 0)
         self.error_cells = set()
+        self.frozen_cells = set()  # Immutable initial cells
         self.message = "Ready to play - Enter numbers in selected cell"
         self.message_color = BLUE
 
@@ -77,6 +78,11 @@ class SudokuGame:
         self.step_delay = 300
         self.show_final_panel = False
         self.waiting_for_difficulty = False
+
+        # Timer state (wall-clock time for solving)
+        self.solver_start_time = None  # milliseconds when solving started
+        self.solver_pause_time = None  # accumulated pause time
+        self.solver_total_pause = 0    # total pause accumulation
 
         # Input state
         self.mouse_pos = (0, 0)
@@ -108,6 +114,8 @@ class SudokuGame:
                 self.selected_cell = (0, 0)
                 self.solving = False
                 self.show_final_panel = False
+                # Mark all non-empty cells as frozen (initial puzzle state)
+                self.frozen_cells = set((i, j) for i in range(9) for j in range(9) if puzzle[i][j] != 0)
                 self.message = msg
                 self.message_color = color
             else:
@@ -117,10 +125,11 @@ class SudokuGame:
 
         elif action_type == 'file_menu':
             if item_index == 1:  # Load Puzzle
-                puzzle, solution, difficulty, clues, msg, color = MenuSystem.load_puzzle_file()
+                puzzle, solution, difficulty, clues, frozen_cells, msg, color = MenuSystem.load_puzzle_file()
                 if puzzle:
                     self.grid = puzzle
                     self.solution = solution or puzzle
+                    self.frozen_cells = frozen_cells if frozen_cells else set()
                     self.show_final_panel = False
                     self.solving = False
                     self.error_cells.clear()
@@ -130,7 +139,7 @@ class SudokuGame:
                     self.message = msg
                     self.message_color = color
             elif item_index == 2:  # Save Puzzle
-                msg, color = MenuSystem.save_puzzle_file(self.grid, self.solution)
+                msg, color = MenuSystem.save_puzzle_file(self.grid, self.solution, self.frozen_cells)
                 self.message = msg
                 self.message_color = color
             elif item_index == 3:  # Exit
@@ -190,10 +199,17 @@ class SudokuGame:
         # --- Solver controls ---
         if key == pygame.K_SPACE and self.solving:
             self.solve_paused = not self.solve_paused
+            now = pygame.time.get_ticks()
             if self.solve_paused:
+                # Record when pause started
+                self.solver_pause_time = now
                 self.message = "Solver paused (SPACE to resume)"
                 self.message_color = DARK_GRAY
             else:
+                # Add pause duration to total pause time
+                if self.solver_pause_time is not None:
+                    self.solver_total_pause += now - self.solver_pause_time
+                    self.solver_pause_time = None
                 self.message = "Solving... (Press SPACE to pause, ESC to stop)"
                 self.message_color = BLUE
             return
@@ -311,12 +327,58 @@ class SudokuGame:
         self.step_time = pygame.time.get_ticks()
         self.show_final_panel = False
 
+        # Freeze user-entered cells (non-empty cells at solve time)
+        self.frozen_cells = set((i, j) for i in range(9) for j in range(9) if self.grid[i][j] != 0)
+
+        # Initialize timer
+        self.solver_start_time = pygame.time.get_ticks()
+        self.solver_pause_time = None
+        self.solver_total_pause = 0
+
         if animated:
             self.solver_gen = self._solve_with_steps()
             self.message = "Solving... (Press SPACE to pause, ESC to stop)"
         else:
             # Fast solve: run to completion immediately
             self.solve_fast_complete()
+
+    def get_solver_elapsed_time(self):
+        """Get elapsed time since solver started (excluding pauses).
+
+        Returns: elapsed milliseconds (int)
+        """
+        if self.solver_start_time is None:
+            return 0
+
+        now = pygame.time.get_ticks()
+        # If currently paused, don't include time since pause started
+        if self.solve_paused and self.solver_pause_time is not None:
+            elapsed = (self.solver_pause_time - self.solver_start_time) - self.solver_total_pause
+        else:
+            elapsed = (now - self.solver_start_time) - self.solver_total_pause
+        return max(0, elapsed)
+
+    def format_solver_time(self, milliseconds):
+        """Format elapsed time as seconds, min:sec, or hr:min:sec.
+
+        Args:
+            milliseconds: elapsed time in milliseconds
+
+        Returns: formatted time string
+        """
+        seconds = milliseconds // 1000
+        minutes = seconds // 60
+        hours = minutes // 60
+
+        if hours > 0:
+            remaining_minutes = minutes % 60
+            remaining_seconds = seconds % 60
+            return f"{hours}h {remaining_minutes}m {remaining_seconds}s"
+        elif minutes > 0:
+            remaining_seconds = seconds % 60
+            return f"{minutes}m {remaining_seconds}s"
+        else:
+            return f"{seconds}s"
 
     def solve_fast_complete(self):
         """Solve instantly without animation"""
@@ -428,13 +490,16 @@ class SudokuGame:
             # Draw everything
             self.screen.fill((250, 250, 250))
             self.ui.draw_menu_bar()
-            self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells, self.solving)
+            self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells,
+                            self.solving, self.frozen_cells)
             self.ui.draw_buttons(self.mouse_pos)
             self.ui.draw_message(self.message, self.message_color)
             if self.solving or self.show_final_panel:
-                self.ui.draw_solver_panel(self.step_count, self.backtrack_count, self.current_cell,
+                elapsed_ms = self.get_solver_elapsed_time()
+                elapsed_str = self.format_solver_time(elapsed_ms)
+                self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
                                         self.candidates, self.solving, self.solve_paused,
-                                        self.show_final_panel, self.solve_fast)
+                                        self.show_final_panel, self.solve_fast, elapsed_str)
 
             # Update and draw menu dropdowns
             self.menu.update_hover(self.mouse_pos)

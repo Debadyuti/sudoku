@@ -284,7 +284,7 @@ class TestPuzzleIO:
         clues = sum(1 for row in puzzle for cell in row if cell != 0)
 
         save_puzzle(puzzle, solution, "medium", str(temp_puzzle_file))
-        loaded_puzzle, loaded_solution, difficulty, loaded_clues = load_puzzle(
+        loaded_puzzle, loaded_solution, difficulty, loaded_clues, frozen_cells = load_puzzle(
             str(temp_puzzle_file)
         )
 
@@ -295,16 +295,17 @@ class TestPuzzleIO:
 
     def test_load_puzzle_nonexistent(self):
         """Test loading nonexistent puzzle."""
-        puzzle, solution, difficulty, clues = load_puzzle("/nonexistent/path/puzzle.json")
+        puzzle, solution, difficulty, clues, frozen_cells = load_puzzle("/nonexistent/path/puzzle.json")
         assert puzzle is None
         assert solution is None
         assert difficulty is None
         assert clues is None
+        assert frozen_cells is None
 
     def test_load_puzzle_invalid_json(self, tmp_path):
         """Test loading invalid JSON file."""
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("{ invalid json }")
 
-        puzzle, solution, difficulty, clues = load_puzzle(str(bad_file))
+        puzzle, solution, difficulty, clues, frozen_cells = load_puzzle(str(bad_file))
         assert puzzle is None

@@ -219,7 +219,7 @@ class TestPuzzleFileIO:
         old_cwd = os.getcwd()
         try:
             os.chdir(tmp_path)
-            puzzle, solution, difficulty, clues, msg, color = (
+            puzzle, solution, difficulty, clues, frozen_cells, msg, color = (
                 MenuSystem.load_puzzle_file()
             )
             assert puzzle is None
