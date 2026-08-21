@@ -325,17 +325,22 @@ class UIRenderer:
         self.screen.blit(info_text, (panel_x + padding, info_y))
 
     def draw_menu_bar(self):
-        """Draw menu bar background and text."""
-        # Background
-        pygame.draw.rect(self.screen, MENU_BG, (0, 0, WIDTH, MENU_HEIGHT))
-        pygame.draw.line(self.screen, MENU_BORDER, (0, MENU_HEIGHT), (WIDTH, MENU_HEIGHT), 1)
+        """Draw menu bar background and text with improved styling."""
+        # Gradient-like effect using slightly darker background
+        pygame.draw.rect(self.screen, (252, 252, 254), (0, 0, WIDTH, MENU_HEIGHT))
 
-        # Menu items
-        file_text = FONT_MENU.render("FILE", True, MENU_TEXT)
-        edit_text = FONT_MENU.render("EDIT", True, MENU_TEXT)
+        # Subtle top border for depth
+        pygame.draw.line(self.screen, (220, 220, 220), (0, 0), (WIDTH, 0), 1)
 
-        self.screen.blit(file_text, (10, 6))
-        self.screen.blit(edit_text, (65, 6))
+        # Bottom border
+        pygame.draw.line(self.screen, (180, 180, 180), (0, MENU_HEIGHT - 1), (WIDTH, MENU_HEIGHT - 1), 1)
+
+        # Menu items with better spacing
+        file_text = FONT_MENU.render("FILE", True, (50, 50, 50))
+        edit_text = FONT_MENU.render("EDIT", True, (50, 50, 50))
+
+        self.screen.blit(file_text, (12, 6))
+        self.screen.blit(edit_text, (67, 6))
 
     def draw_menu_dropdowns(self, menu_open, menu_hover_index, submenu_hover_index, submenu_open):
         """Draw dropdown menus (FILE and EDIT).
@@ -352,80 +357,83 @@ class UIRenderer:
             self._draw_edit_menu(menu_hover_index)
 
     def _draw_file_menu(self, menu_hover_index, submenu_open, submenu_hover_index):
-        """Draw FILE dropdown menu."""
+        """Draw FILE dropdown menu with improved styling."""
         menu_items = ['New Puzzle', 'Load Puzzle...', 'Save Puzzle...', 'Exit']
-        item_height = 30
-        menu_width = 150
+        item_height = 32
+        menu_width = 160
         menu_x = 10
         menu_y = MENU_HEIGHT
 
         # Draw menu background
         total_height = len(menu_items) * item_height
-        pygame.draw.rect(self.screen, WHITE, (menu_x, menu_y, menu_width, total_height))
-        pygame.draw.rect(self.screen, MENU_BORDER, (menu_x, menu_y, menu_width, total_height), 1)
+        pygame.draw.rect(self.screen, (252, 252, 254), (menu_x, menu_y, menu_width, total_height))
+        pygame.draw.rect(self.screen, (150, 150, 180), (menu_x, menu_y, menu_width, total_height), 2)
 
         # Draw items
         for i, item in enumerate(menu_items):
             item_y = menu_y + i * item_height
-            # Hover highlight
+            # Hover highlight with better color
             if menu_hover_index == i:
-                pygame.draw.rect(self.screen, MENU_HOVER, (menu_x, item_y, menu_width, item_height))
-            # Text
-            text = FONT_MENU.render(item, True, MENU_TEXT)
-            self.screen.blit(text, (menu_x + 10, item_y + 6))
+                pygame.draw.rect(self.screen, (220, 230, 250), (menu_x, item_y, menu_width, item_height))
+
+            # Text with better contrast
+            text = FONT_MENU.render(item, True, (50, 50, 50))
+            self.screen.blit(text, (menu_x + 12, item_y + 8))
 
         # Draw New Puzzle submenu if open
         if submenu_open == 'NEW_PUZZLE':
             self._draw_new_puzzle_submenu(menu_x + menu_width, menu_y, submenu_hover_index)
 
     def _draw_new_puzzle_submenu(self, x, y, submenu_hover_index):
-        """Draw New Puzzle submenu with difficulty levels.
+        """Draw New Puzzle submenu with difficulty levels and improved styling.
 
         Args:
             x, y: Position
             submenu_hover_index: Which submenu item is hovered
         """
         submenu_items = ['Easy (E)', 'Medium (M)', 'Hard (H)']
-        item_height = 30
-        submenu_width = 150
+        item_height = 32
+        submenu_width = 160
 
         # Draw submenu background
         total_height = len(submenu_items) * item_height
-        pygame.draw.rect(self.screen, WHITE, (x, y, submenu_width, total_height))
-        pygame.draw.rect(self.screen, MENU_BORDER, (x, y, submenu_width, total_height), 1)
+        pygame.draw.rect(self.screen, (252, 252, 254), (x, y, submenu_width, total_height))
+        pygame.draw.rect(self.screen, (150, 150, 180), (x, y, submenu_width, total_height), 2)
 
         # Draw items
         for i, item in enumerate(submenu_items):
             item_y = y + i * item_height
-            # Hover highlight
+            # Hover highlight with better color
             if submenu_hover_index == i:
-                pygame.draw.rect(self.screen, MENU_HOVER, (x, item_y, submenu_width, item_height))
-            # Text
-            text = FONT_MENU.render(item, True, MENU_TEXT)
-            self.screen.blit(text, (x + 10, item_y + 6))
+                pygame.draw.rect(self.screen, (220, 230, 250), (x, item_y, submenu_width, item_height))
+
+            # Text with better contrast
+            text = FONT_MENU.render(item, True, (50, 50, 50))
+            self.screen.blit(text, (x + 12, item_y + 8))
 
     def _draw_edit_menu(self, menu_hover_index):
-        """Draw Edit dropdown menu."""
+        """Draw Edit dropdown menu with improved styling."""
         menu_items = ['Clear Grid']
-        item_height = 30
-        menu_width = 150
+        item_height = 32
+        menu_width = 160
         menu_x = 65
         menu_y = MENU_HEIGHT
 
         # Draw menu background
         total_height = len(menu_items) * item_height
-        pygame.draw.rect(self.screen, WHITE, (menu_x, menu_y, menu_width, total_height))
-        pygame.draw.rect(self.screen, MENU_BORDER, (menu_x, menu_y, menu_width, total_height), 1)
+        pygame.draw.rect(self.screen, (252, 252, 254), (menu_x, menu_y, menu_width, total_height))
+        pygame.draw.rect(self.screen, (150, 150, 180), (menu_x, menu_y, menu_width, total_height), 2)
 
         # Draw items
         for i, item in enumerate(menu_items):
             item_y = menu_y + i * item_height
-            # Hover highlight
+            # Hover highlight with better color
             if menu_hover_index == i:
-                pygame.draw.rect(self.screen, MENU_HOVER, (menu_x, item_y, menu_width, item_height))
-            # Text
-            text = FONT_MENU.render(item, True, MENU_TEXT)
-            self.screen.blit(text, (menu_x + 10, item_y + 6))
+                pygame.draw.rect(self.screen, (220, 230, 250), (menu_x, item_y, menu_width, item_height))
+
+            # Text with better contrast
+            text = FONT_MENU.render(item, True, (50, 50, 50))
+            self.screen.blit(text, (menu_x + 12, item_y + 8))
 
     def trigger_cell_animation(self, row, col, duration=200):
         """Trigger a fill animation for a cell.
