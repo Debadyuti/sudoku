@@ -9,7 +9,9 @@ A fully-featured Sudoku game built with Python and Pygame, featuring a clean UI,
 ✅ **Number Entry** - Type numbers 1-9 to fill cells  
 ✅ **Finalize Button** - Validates your completed puzzle  
 ✅ **Clear Button** - Reset the entire grid to start over  
-✅ **Solve Button** - Automatically solves the puzzle using backtracking algorithm  
+✅ **Educational Solver** - Animated step-by-step backtracking algorithm visualization  
+✅ **Algorithm Visualization** - Side panel shows current cell, valid candidates, step count, and backtrack count  
+✅ **Solver Controls** - Pause/resume, adjust speed, and stop at any time  
 ✅ **Error Highlighting** - Invalid entries are highlighted in red  
 ✅ **Visual Feedback** - Success and error messages displayed  
 ✅ **Intuitive Controls** - Mouse and keyboard support  
@@ -55,7 +57,9 @@ uv run python sudoku_game.py
 - Press **0**, **Backspace**, or **Delete** to clear a cell
 - Use number pad keys (1-9) as an alternative
 
-### Buttons
+### Buttons (2x2 Grid Layout)
+
+**Row 1:**
 
 1. **Finalize** (Green)
    - Validates your completed puzzle
@@ -66,10 +70,19 @@ uv run python sudoku_game.py
    - Clears the entire grid
    - Resets all cells to empty
 
-3. **Solve** (Blue)
-   - Automatically solves the current puzzle
-   - Uses backtracking algorithm
+**Row 2:**
+
+3. **Solve Algo** (Dark Blue)
+   - Solves the puzzle step-by-step with animation
+   - Shows algorithm execution in real-time with a side panel
+   - Uses backtracking algorithm with visual feedback
    - Shows "No solution exists!" if puzzle is unsolvable
+   - Press SPACE to pause/resume, UP/DOWN to adjust speed, ESC to stop
+
+4. **Solve Fast** (Light Blue)
+   - Solves the puzzle instantly without animation
+   - Displays final algorithm statistics in the side panel
+   - Shows total steps and backtrack count instantly
 
 ### Game Rules
 
@@ -81,18 +94,77 @@ A valid Sudoku puzzle must satisfy:
 ### Visual Indicators
 
 - **Light Blue** - Currently selected cell
+- **Yellow** - Cell being evaluated by the solver
 - **Light Red** - Cells with conflicts/errors
 - **Green Message** - Success (puzzle solved correctly)
 - **Red Message** - Error (conflicts found or incomplete)
 - **Blue Message** - Information (grid cleared, solving)
 
+## Educational Solver Features
+
+The Sudoku game includes two solving modes for learning about algorithms:
+
+### Two Solving Modes
+
+**Mode 1: Solve Algo (Animated Education)**
+- Click "Solve Algo" to watch the algorithm step-by-step
+- Shows real-time visualization of the backtracking process
+- Side panel displays:
+  - **Current Cell** - Which cell is being evaluated (row, col)
+  - **Steps** - Total number of evaluation steps taken
+  - **Backtracks** - How many times the algorithm had to backtrack
+  - **Valid Candidates** - Numbers that can legally be placed in current cell
+- Speed is adjustable during solving
+
+**Mode 2: Solve Fast (Instant Solve)**
+- Click "Solve Fast" to solve instantly without animation
+- Completes in milliseconds
+- Side panel shows final statistics:
+  - **Steps** - Total steps the algorithm would have taken
+  - **Backtracks** - Total backtracks needed
+- Perfect when you want the answer immediately but still want to see algorithm complexity
+
+### Solver Controls
+
+**During animated solving (Solve Algo):**
+- **SPACE** - Pause and resume the solving animation
+- **UP Arrow** - Increase speed (faster animation)
+- **DOWN Arrow** - Decrease speed (slower animation)
+- **ESC** - Stop the solver completely
+
+**After solving (both modes):**
+- Click any button to close the final panel
+- The panel displays:
+  - Total steps taken
+  - Number of backtracks
+  - Valid candidates (if still animating)
+
+### Understanding the Algorithm
+
+The solver uses the **backtracking algorithm**:
+
+1. Find an empty cell
+2. Determine which numbers (1-9) are valid for that cell (no conflicts in row, column, or 3x3 box)
+3. Try placing the first valid candidate
+4. Recursively solve the rest of the puzzle
+5. If no solution is found, backtrack (undo) and try the next candidate
+6. Repeat until puzzle is solved or all possibilities exhausted
+
+The animation helps visualize this process by:
+- Highlighting the current cell being worked on (yellow)
+- Showing valid candidates for that cell in the side panel
+- Counting steps and backtracks
+- Allowing you to pause and examine the algorithm state at any point
+
 ## Application Structure
 
 ```
 sudoku/
-├── sudoku_game.py      # Main application file
-├── requirements.txt    # Python dependencies
-└── README.md          # This file
+├── sudoku_game.py         # Main application with educational solver
+├── pyproject.toml         # Project metadata and dependencies
+├── README.md              # This file
+├── CLAUDE.md              # Redirect to AGENTS.md
+└── AGENTS.md              # Agent and coding instructions
 ```
 
 ## Technical Details
