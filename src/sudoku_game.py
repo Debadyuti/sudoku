@@ -1,5 +1,6 @@
 import pygame
 import sys
+import signal
 from collections import deque
 
 # Import all constants from constants module
@@ -534,46 +535,57 @@ class SudokuGame:
         """Main game loop"""
         running = True
 
-        while running:
-            # Track mouse position for hover effects
-            self.mouse_pos = pygame.mouse.get_pos()
+        def signal_handler(sig, frame):
+            """Handle Ctrl+C cleanly"""
+            nonlocal running
+            running = False
 
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.handle_click(event.pos)
-                elif event.type == pygame.KEYDOWN:
-                    self.handle_key(event.key, event.mod)
+        # Register Ctrl+C handler for clean shutdown
+        signal.signal(signal.SIGINT, signal_handler)
 
-            # Update solver animation
-            if self.solving:
-                self.solve_step_by_step()
+        try:
+            while running:
+                # Track mouse position for hover effects
+                self.mouse_pos = pygame.mouse.get_pos()
 
-            # Draw everything
-            self.screen.fill((250, 250, 250))
-            self.ui.draw_menu_bar()
-            self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells,
-                            self.solving, self.frozen_cells)
-            self.ui.draw_buttons(self.mouse_pos)
-            self.ui.draw_message(self.message, self.message_color)
-            if self.solving or self.show_final_panel:
-                elapsed_ms = self.get_solver_elapsed_time()
-                elapsed_str = self.format_solver_time(elapsed_ms)
-                self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
-                                        self.candidates, self.solving, self.solve_paused,
-                                        self.show_final_panel, self.solve_fast, elapsed_str)
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        running = False
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        self.handle_click(event.pos)
+                    elif event.type == pygame.KEYDOWN:
+                        self.handle_key(event.key, event.mod)
 
-            # Update and draw menu dropdowns
-            self.menu.update_hover(self.mouse_pos)
-            self.ui.draw_menu_dropdowns(self.menu.menu_open, self.menu.menu_hover_index,
-                                       self.menu.submenu_hover_index, self.menu.submenu_open)
+                # Update solver animation
+                if self.solving:
+                    self.solve_step_by_step()
 
-            pygame.display.flip()
-            self.clock.tick(60)
+                # Draw everything
+                self.screen.fill((250, 250, 250))
+                self.ui.draw_menu_bar()
+                self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells,
+                                self.solving, self.frozen_cells)
+                self.ui.draw_buttons(self.mouse_pos)
+                self.ui.draw_message(self.message, self.message_color)
+                if self.solving or self.show_final_panel:
+                    elapsed_ms = self.get_solver_elapsed_time()
+                    elapsed_str = self.format_solver_time(elapsed_ms)
+                    self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
+                                            self.candidates, self.solving, self.solve_paused,
+                                            self.show_final_panel, self.solve_fast, elapsed_str)
 
-        pygame.quit()
-        sys.exit()
+                # Update and draw menu dropdowns
+                self.menu.update_hover(self.mouse_pos)
+                self.ui.draw_menu_dropdowns(self.menu.menu_open, self.menu.menu_hover_index,
+                                           self.menu.submenu_hover_index, self.menu.submenu_open)
+
+                pygame.display.flip()
+                self.clock.tick(60)
+        except KeyboardInterrupt:
+            pass
+        finally:
+            pygame.quit()
+            sys.exit()
 
 
 if __name__ == "__main__":
