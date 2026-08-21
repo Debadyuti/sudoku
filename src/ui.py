@@ -247,7 +247,7 @@ class UIRenderer:
 
     def draw_solver_panel(self, backtrack_count, step_count, current_cell, candidates,
                          solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s",
-                         step_pulse_time=0, backtrack_pulse_time=0):
+                         step_pulse_time=0, backtrack_pulse_time=0, step_delay=300):
         """Draw algorithm visualization panel with metrics and animations.
 
         Args:
@@ -262,6 +262,7 @@ class UIRenderer:
             elapsed_time: Formatted elapsed time string (e.g. "1m 23s")
             step_pulse_time: Time when step counter last updated
             backtrack_pulse_time: Time when backtrack counter last updated
+            step_delay: Delay between steps in ms (for speed calculation)
         """
         if not solving and not show_final_panel:
             return
@@ -368,6 +369,13 @@ class UIRenderer:
         status_y = panel_y + GRID_SIZE - 90
         info_y = panel_y + GRID_SIZE - 60
 
+        # Speed display (utilize space above status)
+        current_speed = 100 - (step_delay // 10)
+        speed_label = pygame.font.Font(None, 18).render("Speed:", True, (66, 66, 66))
+        self.screen.blit(speed_label, (panel_x + padding, status_y - 30))
+        speed_value = pygame.font.Font(None, 22).render(f"{current_speed}%", True, BLUE)
+        self.screen.blit(speed_value, (panel_x + padding + 70, status_y - 30))
+
         # Status indicator (fixed at bottom)
         if show_final_panel:
             status = "COMPLETED"
@@ -397,7 +405,7 @@ class UIRenderer:
         if show_final_panel:
             info_text = info_font.render("Click any button", True, (100, 100, 100))
         else:
-            info_text = info_font.render("SPACE: pause  UP/DOWN: speed  ESC: stop", True, (100, 100, 100))
+            info_text = info_font.render("SPACE: Pause  UP/DOWN: Speed  ESC: Stop", True, (100, 100, 100))
 
         self.screen.blit(info_text, (panel_x + padding, info_y))
 

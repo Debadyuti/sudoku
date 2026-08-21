@@ -271,13 +271,13 @@ class SudokuGame:
         # Speed controls while solving
         if self.solving:
             if key == pygame.K_UP:  # Faster
-                self.step_delay = max(50, self.step_delay - 50)
-                self.message = f"Speed: {100 - (self.step_delay // 5)}%"
+                self.step_delay = max(10, self.step_delay - 50)
+                self.message = f"Speed: {100 - (self.step_delay // 10)}%"
                 self.message_color = BLUE
                 return
             elif key == pygame.K_DOWN:  # Slower
                 self.step_delay = min(1000, self.step_delay + 50)
-                self.message = f"Speed: {100 - (self.step_delay // 5)}%"
+                self.message = f"Speed: {100 - (self.step_delay // 10)}%"
                 self.message_color = BLUE
                 return
 
@@ -607,7 +607,7 @@ class SudokuGame:
                     self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
                                             self.candidates, self.solving, self.solve_paused,
                                             self.show_final_panel, self.solve_fast, elapsed_str,
-                                            self.step_pulse_time, self.backtrack_pulse_time)
+                                            self.step_pulse_time, self.backtrack_pulse_time, self.step_delay)
 
                 # Update and draw menu dropdowns
                 self.menu.update_hover(self.mouse_pos)
