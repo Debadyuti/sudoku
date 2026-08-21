@@ -98,6 +98,9 @@ class SudokuGame:
         # Animation state (Phase 3: Animation Framework)
         self.animations = {}  # {(row,col): {'start_time': ms, 'duration': ms, 'type': 'highlight'}}
         self.button_hover_times = {}  # {'finalize': start_time, ...}
+
+        # Phase 6.1: Hint System
+        self.hint_candidates = []
         self.panel_stat_update_time = 0  # Tracks panel animation timing
         self.message_animation_start = 0  # Tracks message slide-in timing
         self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
@@ -229,6 +232,27 @@ class SudokuGame:
                     self.message_color = BLUE
             return
 
+        # --- Hint system (H key) ---
+        if key == pygame.K_h:
+            if self.selected_cell and not self.solving:
+                row, col = self.selected_cell
+                if self.grid[row][col] == 0:  # Only if cell is empty
+                    solver = SudokuSolver(self.grid)
+                    candidates = solver.get_candidates(row, col)
+                    if candidates:
+                        self.hint_candidates = candidates
+                        self.message = f"Valid candidates: {', '.join(map(str, candidates))}"
+                        self.message_color = BLUE
+                    else:
+                        self.message = "No valid candidates for this cell!"
+                        self.message_color = RED
+                        self.hint_candidates = []
+                else:
+                    self.message = "Cell already filled!"
+                    self.message_color = RED
+                    self.hint_candidates = []
+            return
+
         # --- Handle difficulty selection ---
         if self.waiting_for_difficulty:
             if key == pygame.K_e:  # Easy
@@ -323,16 +347,19 @@ class SudokuGame:
             self.grid[row][col] = key - pygame.K_0
             self.message = ""
             self.error_cells.clear()
+            self.hint_candidates = []  # Clear hint when entering number
         # Keypad numbers
         elif pygame.K_KP1 <= key <= pygame.K_KP9:
             self.grid[row][col] = key - pygame.K_KP1 + 1
             self.message = ""
             self.error_cells.clear()
+            self.hint_candidates = []  # Clear hint when entering number
         # Delete/Backspace
         elif key in (pygame.K_BACKSPACE, pygame.K_DELETE, pygame.K_0, pygame.K_KP0):
             self.grid[row][col] = 0
             self.message = ""
             self.error_cells.clear()
+            self.hint_candidates = []  # Clear hint when clearing cell
     
     
     def finalize_puzzle(self):
@@ -359,6 +386,7 @@ class SudokuGame:
         self.frozen_cells.clear()
         self.selected_cell = (0, 0)  # Auto-select top-left
         self.error_cells.clear()
+        self.hint_candidates = []  # Clear hint
         self.message = "Grid cleared!"
         self.message_color = BLUE
         self.show_final_panel = False
