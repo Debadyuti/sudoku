@@ -157,3 +157,17 @@ def draw_rounded_rect(surface, color, rect, radius=5):
     pygame.draw.circle(surface, color, (x + w - radius, y + radius), radius)
     pygame.draw.circle(surface, color, (x + radius, y + h - radius), radius)
     pygame.draw.circle(surface, color, (x + w - radius, y + h - radius), radius)
+
+
+def interpolate_color(c1, c2, t):
+    """Interpolate between two RGB colors.
+
+    Args:
+        c1: Start color (R, G, B tuple)
+        c2: End color (R, G, B tuple)
+        t: Time factor [0, 1]
+
+    Returns: Interpolated color (R, G, B tuple)
+    """
+    t = max(0, min(1, t))
+    return tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))

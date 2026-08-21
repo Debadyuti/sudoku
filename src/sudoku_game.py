@@ -16,7 +16,7 @@ try:
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
-        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
     from .solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from .ui import UIRenderer
@@ -34,7 +34,7 @@ except ImportError:
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
-        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
     from solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from ui import UIRenderer
@@ -93,6 +93,13 @@ class SudokuGame:
         self.last_backtrack_count = 0
         self.step_pulse_time = 0
         self.backtrack_pulse_time = 0
+
+        # Animation state (Phase 3: Animation Framework)
+        self.animations = {}  # {(row,col): {'start_time': ms, 'duration': ms, 'type': 'highlight'}}
+        self.button_hover_times = {}  # {'finalize': start_time, ...}
+        self.panel_stat_update_time = 0  # Tracks panel animation timing
+        self.message_animation_start = 0  # Tracks message slide-in timing
+        self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
 
     def _process_menu_action(self, action):
         """Process menu action returned by MenuSystem.handle_click()"""
@@ -560,6 +567,11 @@ class SudokuGame:
 
         try:
             while running:
+                # Calculate delta time for frame-independent animations
+                current_time = pygame.time.get_ticks()
+                self.delta_time = min((current_time - self.last_frame_time) / 1000.0, 0.016)
+                self.last_frame_time = current_time
+
                 # Track mouse position for hover effects
                 self.mouse_pos = pygame.mouse.get_pos()
 

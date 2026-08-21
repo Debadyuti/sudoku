@@ -22,7 +22,7 @@ try:
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
-        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
 except ImportError:
     # Fallback for when imported via sys.path (from run.py)
@@ -37,7 +37,7 @@ except ImportError:
         GREEN, RED, BLUE, CYAN, ORANGE,
         MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
-        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
 
 
@@ -469,6 +469,37 @@ class UIRenderer:
             return lerp(1.0, peak, progress * 2)
         else:
             return lerp(peak, 1.0, (progress - 0.5) * 2)
+
+    def get_bar_glow(self, pulse_time, duration=100):
+        """Get glow effect for progress bars during stat updates.
+
+        Args:
+            pulse_time: Time when pulse started
+            duration: Animation duration
+
+        Returns: Glow intensity [0, 1]
+        """
+        now = pygame.time.get_ticks()
+        if pulse_time == 0:
+            return 0.0
+        elapsed = now - pulse_time
+        if elapsed > duration:
+            return 0.0
+        progress = ease_in_out(elapsed / duration)
+        # Glow peaks at 0.5, creates subtle highlight
+        return max(0, 1.0 - abs(2.0 * progress - 1.0))
+
+    def trigger_cell_animation(self, row, col, duration=200):
+        """Trigger a cell highlight animation.
+
+        Args:
+            row, col: Cell position
+            duration: Animation duration in milliseconds
+        """
+        self.cell_animations[(row, col)] = {
+            'start_time': pygame.time.get_ticks(),
+            'duration': duration
+        }
 
     def _get_cell_color(self, row, col, base_color):
         """Get cell color with smooth animation fade-in effect.
