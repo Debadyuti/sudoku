@@ -153,13 +153,14 @@ class MenuSystem:
             return None, None, None, None, None, f"Error: {str(e)}", RED
 
     @staticmethod
-    def save_puzzle_file(grid, puzzle_solution=None, frozen_cells=None):
+    def save_puzzle_file(grid, puzzle_solution=None, frozen_cells=None, difficulty=None):
         """Save puzzle to file using Windows file dialog.
 
         Args:
             grid: Current grid (puzzle state)
             puzzle_solution: Optional solution grid (defaults to current grid as solution)
             frozen_cells: Set of (row, col) tuples for initial/immutable cells
+            difficulty: Puzzle difficulty ('easy', 'medium', 'hard'), defaults to 'medium'
 
         Returns: (message, message_color)
         """
@@ -190,17 +191,11 @@ class MenuSystem:
             if not filepath.endswith('.json'):
                 filepath += '.json'
 
-            # Determine difficulty from clue count
-            clues = sum(1 for row in grid for cell in row if cell != 0)
-            if clues <= 20:
-                difficulty = 'easy'
-            elif clues <= 35:
-                difficulty = 'medium'
-            else:
-                difficulty = 'hard'
+            # Use passed difficulty or default to medium
+            puzzle_difficulty = difficulty if difficulty else 'medium'
 
             solution = puzzle_solution if puzzle_solution else [row[:] for row in grid]
-            save_puzzle(grid, solution, difficulty, filepath, frozen_cells)
+            save_puzzle(grid, solution, puzzle_difficulty, filepath, frozen_cells)
 
             return f"Puzzle saved: {Path(filepath).name}", GREEN
         except Exception as e:

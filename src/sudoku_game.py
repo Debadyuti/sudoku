@@ -57,6 +57,7 @@ class SudokuGame:
         self.selected_cell = (0, 0)
         self.error_cells = set()
         self.frozen_cells = set()  # Immutable initial cells
+        self.puzzle_difficulty = "medium"  # Track difficulty: easy/medium/hard
         self.message = "Ready to play - Enter numbers in selected cell"
         self.message_color = BLUE
 
@@ -110,6 +111,7 @@ class SudokuGame:
             if puzzle:
                 self.grid = puzzle
                 self.solution = solution
+                self.puzzle_difficulty = difficulty  # Track original difficulty
                 self.error_cells.clear()
                 self.selected_cell = (0, 0)
                 self.solving = False
@@ -129,6 +131,7 @@ class SudokuGame:
                 if puzzle:
                     self.grid = puzzle
                     self.solution = solution or puzzle
+                    self.puzzle_difficulty = difficulty  # Use loaded difficulty
                     self.frozen_cells = frozen_cells if frozen_cells else set()
                     self.show_final_panel = False
                     self.solving = False
@@ -139,7 +142,7 @@ class SudokuGame:
                     self.message = msg
                     self.message_color = color
             elif item_index == 2:  # Save Puzzle
-                msg, color = MenuSystem.save_puzzle_file(self.grid, self.solution, self.frozen_cells)
+                msg, color = MenuSystem.save_puzzle_file(self.grid, self.solution, self.frozen_cells, self.puzzle_difficulty)
                 self.message = msg
                 self.message_color = color
             elif item_index == 3:  # Exit
