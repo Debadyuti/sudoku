@@ -105,6 +105,10 @@ class SudokuGame:
         # Phase 6.2: Puzzle Statistics
         self.cells_filled_initially = 0  # Count of initial clues
         self.solving_start_time = None  # When solve started
+
+        # Phase 6.3: Undo/Redo System
+        self.move_history = []  # Stack of grid states
+        self.move_index = -1  # Current position in history (-1 = no saves yet)
         self.panel_stat_update_time = 0  # Tracks panel animation timing
         self.message_animation_start = 0  # Tracks message slide-in timing
         self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
@@ -236,6 +240,16 @@ class SudokuGame:
                     self.message_color = BLUE
             return
 
+        # --- Undo/Redo (Phase 6.3) ---
+        if (mod & pygame.KMOD_CTRL) and key == pygame.K_z:  # Ctrl+Z Undo
+            if not self.solving:
+                self.undo_move()
+            return
+        if (mod & pygame.KMOD_CTRL) and key == pygame.K_y:  # Ctrl+Y Redo
+            if not self.solving:
+                self.redo_move()
+            return
+
         # --- Hint system (H key) ---
         if key == pygame.K_h:
             if self.selected_cell and not self.solving:
@@ -349,18 +363,21 @@ class SudokuGame:
         # Number keys (1-9)
         if pygame.K_1 <= key <= pygame.K_9:
             self.grid[row][col] = key - pygame.K_0
+            self._save_move_state()  # Save to undo/redo history
             self.message = ""
             self.error_cells.clear()
             self.hint_candidates = []  # Clear hint when entering number
         # Keypad numbers
         elif pygame.K_KP1 <= key <= pygame.K_KP9:
             self.grid[row][col] = key - pygame.K_KP1 + 1
+            self._save_move_state()  # Save to undo/redo history
             self.message = ""
             self.error_cells.clear()
             self.hint_candidates = []  # Clear hint when entering number
         # Delete/Backspace
         elif key in (pygame.K_BACKSPACE, pygame.K_DELETE, pygame.K_0, pygame.K_KP0):
             self.grid[row][col] = 0
+            self._save_move_state()  # Save to undo/redo history
             self.message = ""
             self.error_cells.clear()
             self.hint_candidates = []  # Clear hint when clearing cell
@@ -391,6 +408,8 @@ class SudokuGame:
         self.selected_cell = (0, 0)  # Auto-select top-left
         self.error_cells.clear()
         self.hint_candidates = []  # Clear hint
+        self.move_history = []  # Clear undo/redo history
+        self.move_index = -1
         self.message = "Grid cleared!"
         self.message_color = BLUE
         self.show_final_panel = False
@@ -512,6 +531,62 @@ class SudokuGame:
             'progress': progress_pct,
             'difficulty': self.puzzle_difficulty
         }
+
+    def _save_move_state(self):
+        """Save current grid state to move history (Phase 6.3).
+
+        Trims redo stack if new move made, then saves state with max 100 moves.
+        """
+        import copy
+
+        # Trim redo stack if making new move
+        if self.move_index < len(self.move_history) - 1:
+            self.move_history = self.move_history[:self.move_index + 1]
+
+        # Add current state
+        self.move_history.append(copy.deepcopy(self.grid))
+        self.move_index += 1
+
+        # Limit history to 100 moves
+        if len(self.move_history) > 100:
+            self.move_history.pop(0)
+            self.move_index -= 1
+
+    def undo_move(self):
+        """Undo last move (Ctrl+Z).
+
+        Restores previous grid state and clears error cells.
+        """
+        import copy
+
+        if self.move_index > 0:
+            self.move_index -= 1
+            self.grid = copy.deepcopy(self.move_history[self.move_index])
+            self.message = "Move undone"
+            self.message_color = BLUE
+            self.error_cells.clear()
+            self.hint_candidates = []
+        else:
+            self.message = "Nothing to undo"
+            self.message_color = BLUE
+
+    def redo_move(self):
+        """Redo undone move (Ctrl+Y).
+
+        Restores next grid state and clears error cells.
+        """
+        import copy
+
+        if self.move_index < len(self.move_history) - 1:
+            self.move_index += 1
+            self.grid = copy.deepcopy(self.move_history[self.move_index])
+            self.message = "Move redone"
+            self.message_color = BLUE
+            self.error_cells.clear()
+            self.hint_candidates = []
+        else:
+            self.message = "Nothing to redo"
+            self.message_color = BLUE
 
     def solve_fast_complete(self):
         """Solve instantly without animation, tracking steps/backtracks"""
