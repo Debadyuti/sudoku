@@ -115,6 +115,15 @@ Buttons (Material Design):
 - Modern theme support: Follows OS dark mode
 - Custom renderers: For advanced effects
 
+## Phase 7: Distribution & Auto-Update
+
+- **PHASE7_DISTRIBUTION_DESIGN.md** - Complete design for Tauri + GitHub Releases
+  - Auto-update architecture
+  - Version management workflow
+  - GitHub Actions CI/CD setup
+  - Release process documentation
+  - User experience flow
+
 ## Related Documentation
 
 - **PROJECT_STATUS.md** (docs/) - Complete project status report
@@ -125,4 +134,4 @@ Buttons (Material Design):
 ---
 
 **Last Updated**: 2026-08-21  
-**Status**: Complete (Phase 4 - Color Palette implemented)
+**Status**: Phase 6 complete (Hint, Statistics, Undo/Redo) | Phase 7 designed (ready for implementation)
