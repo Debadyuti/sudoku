@@ -1,20 +1,23 @@
 # Sudoku Game - Python Pygame Application
 
-A fully-featured Sudoku game built with Python and Pygame, featuring a clean UI, user input validation, error highlighting, and an automatic solver.
+A fully-featured Sudoku game built with Python and Pygame, featuring a modern UI with smooth animations, user input validation, error highlighting, and an educational algorithm visualizer.
 
 ## Features
 
-✅ **Blank 9x9 Grid** - Start with an empty Sudoku grid  
-✅ **Interactive Cell Selection** - Click to select cells with visual highlighting  
-✅ **Number Entry** - Type numbers 1-9 to fill cells  
+✅ **Modern UI Design** - Clean interface with Material Design colors and smooth animations  
+✅ **Blank 9x9 Grid** - Start with an empty Sudoku grid with enhanced visual hierarchy  
+✅ **Interactive Cell Selection** - Click to select cells with smooth highlighting animations  
+✅ **Number Entry** - Type numbers 1-9 to fill cells with visual feedback  
 ✅ **Finalize Button** - Validates your completed puzzle  
 ✅ **Clear Button** - Reset the entire grid to start over  
-✅ **Educational Solver** - Animated step-by-step backtracking algorithm visualization  
-✅ **Algorithm Visualization** - Side panel shows current cell, valid candidates, step count, and backtrack count  
+✅ **Educational Solver** - Animated step-by-step backtracking with smooth cell fill animations  
+✅ **Advanced Algorithm Panel** - Progress bars, pulsing statistics, and real-time metrics  
+✅ **Visual Progress Tracking** - Steps and backtracks displayed with animated progress bars  
+✅ **Smooth Animations** - Cell fills, button hover effects, stat pulses  
 ✅ **Solver Controls** - Pause/resume, adjust speed, and stop at any time  
-✅ **Error Highlighting** - Invalid entries are highlighted in red  
-✅ **Visual Feedback** - Success and error messages displayed  
-✅ **Intuitive Controls** - Mouse and keyboard support  
+✅ **Error Highlighting** - Invalid entries highlighted with soft, pleasant colors  
+✅ **Visual Feedback** - Toast-style message display with backgrounds  
+✅ **Intuitive Controls** - Mouse and keyboard support with real-time hover feedback  
 
 ## Installation
 
@@ -195,15 +198,29 @@ The application is built using object-oriented programming with a single `Sudoku
    - Efficient empty cell finding
    - Constraint satisfaction
 
-### Color Scheme
+### Color Scheme (Material Design)
 
-- Grid Background: White
-- Grid Lines: Black (thick for boxes, thin for cells)
-- Selected Cell: Light Blue (#ADD8E6)
-- Error Cells: Light Red (#FFB6C1)
-- Finalize Button: Green (#228B22)
-- Clear Button: Red (#DC143C)
-- Solve Button: Blue (#1E90FF)
+**Grid**:
+- Background: White (#FFFFFF)
+- Cell borders (thin): Light Gray (#B4B4B4)
+- Box borders (thick): Dark Blue (#193787)
+
+**Cell States**:
+- Selected: Light Blue (#96DCFF)
+- Solving: Soft Yellow (#FFFAC8)
+- Error: Soft Red (#FFC8C8)
+
+**Buttons**:
+- Finalize: Green (#4CAF50) → Hover: (#64C864)
+- Clear: Red (#E53935) → Hover: (#FF646464)
+- Solve Algo: Blue (#4285F4) → Hover: (#64A0FF)
+- Solve Fast: Cyan (#00BCD4) → Hover: (#64DCFF)
+
+**UI Elements**:
+- Text Primary: Dark Gray (#424242)
+- Text Subtle: Medium Gray (#9E9E9E)
+- Panel Background: Light Gray (#F5F5F5)
+- Panel Border: Medium Blue (#6496C8)
 
 ## Troubleshooting
 

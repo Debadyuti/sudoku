@@ -7,19 +7,20 @@ pygame.init()
 
 # Constants
 WIDTH = 900
-HEIGHT = 700
+HEIGHT = 750  # Increased from 700 to prevent button overflow
 GRID_SIZE = 540
 CELL_SIZE = GRID_SIZE // 9
 BUTTON_HEIGHT = 50
 BUTTON_WIDTH = 140
 MARGIN = 30
 PANEL_WIDTH = 260  # Right panel for algorithm visualization
+PANEL_GAP = 15    # Gap between grid and panel
 
 # Layout — derived from constants so everything stays in sync
 GRID_BOTTOM = MARGIN + GRID_SIZE          # 570
-MESSAGE_Y   = GRID_BOTTOM + 14           # 584  — message zone top
-BUTTON_Y    = GRID_BOTTOM + 55           # 625  — button row top (row 1)
-BUTTON_Y2   = GRID_BOTTOM + 95           # 655  — button row 2
+MESSAGE_Y   = GRID_BOTTOM + 20           # 590  — message zone top (increased gap)
+BUTTON_Y    = GRID_BOTTOM + 70           # 640  — button row top (row 1, more space)
+BUTTON_Y2   = GRID_BOTTOM + 125          # 695  — button row 2 (more space between)
 # Two rows x two buttons grid: [Finalize, Clear] and [Solve Algo, Solve Fast]
 _BTN_GAP    = (GRID_SIZE - 2 * BUTTON_WIDTH) // 3  # Center buttons within grid area
 BUTTON_X1 = MARGIN + _BTN_GAP
@@ -41,6 +42,35 @@ FONT_LARGE = pygame.font.Font(None, 40)
 FONT_MEDIUM = pygame.font.Font(None, 32)
 FONT_SMALL = pygame.font.Font(None, 24)
 
+# Animation utilities
+def lerp(a, b, t):
+    """Linear interpolation between a and b, t in [0, 1]"""
+    t = max(0, min(1, t))
+    return a + (b - a) * t
+
+def ease_in_out(t):
+    """Smooth ease-in-out curve"""
+    t = max(0, min(1, t))
+    return t * t * (3 - 2 * t)
+
+def draw_progress_bar(surface, x, y, width, height, filled_pct, color, bg_color=(220, 220, 220)):
+    """Draw a progress bar. filled_pct: 0-1 (percentage filled)"""
+    filled_pct = max(0, min(1, filled_pct))
+    pygame.draw.rect(surface, bg_color, (x, y, width, height))
+    if filled_pct > 0:
+        filled_width = int(width * filled_pct)
+        pygame.draw.rect(surface, color, (x, y, filled_width, height))
+    pygame.draw.rect(surface, BLACK, (x, y, width, height), 1)  # Border
+
+def draw_rounded_rect(surface, color, rect, radius=5):
+    """Draw a rectangle with rounded corners"""
+    x, y, w, h = rect.x, rect.y, rect.width, rect.height
+    pygame.draw.rect(surface, color, (x + radius, y, w - 2*radius, h))
+    pygame.draw.rect(surface, color, (x, y + radius, w, h - 2*radius))
+    pygame.draw.circle(surface, color, (x + radius, y + radius), radius)
+    pygame.draw.circle(surface, color, (x + w - radius, y + radius), radius)
+    pygame.draw.circle(surface, color, (x + radius, y + h - radius), radius)
+    pygame.draw.circle(surface, color, (x + w - radius, y + h - radius), radius)
 
 class SudokuGame:
     def __init__(self):
@@ -50,10 +80,10 @@ class SudokuGame:
 
         # Game state
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
-        self.selected_cell = None
+        self.selected_cell = (0, 0)  # Auto-select top-left cell on startup
         self.error_cells = set()
-        self.message = ""
-        self.message_color = BLACK
+        self.message = "Ready to play - Enter numbers in selected cell"
+        self.message_color = BLUE
 
         # Button positions — 2x2 grid layout
         self.finalize_button = pygame.Rect(BUTTON_X1, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
@@ -73,162 +103,249 @@ class SudokuGame:
         self.step_time = 0
         self.step_delay = 300  # milliseconds between solver steps
         self.show_final_panel = False  # Keep panel visible after solving
+
+        # Animation state
+        self.mouse_pos = (0, 0)  # Current mouse position for hover detection
+        self.button_hover = None  # Which button is being hovered
+        self.message_fade_time = 0  # Time remaining for message fade animation
+        self.hovered_button_start_time = 0  # Track hover start for smooth transitions
+        self.last_frame_time = pygame.time.get_ticks()  # For delta-time calculations
+        self.cell_animations = {}  # Track animations for each cell (row, col): {start_time, duration, type}
+        self.last_step_count = 0  # For pulse animation on stat change
+        self.last_backtrack_count = 0  # For pulse animation on stat change
+        self.step_pulse_time = 0  # Time when last pulse animation started
+        self.backtrack_pulse_time = 0  # Time when last pulse animation started
         
+    def get_cell_color(self, row, col, base_color):
+        """Get cell color with smooth animation fade-in effect"""
+        cell_key = (row, col)
+        now = pygame.time.get_ticks()
+
+        # Check if cell is animating
+        if cell_key in self.cell_animations:
+            anim = self.cell_animations[cell_key]
+            elapsed = now - anim['start_time']
+            duration = anim['duration']
+
+            if elapsed < duration:
+                # Smooth fade-in using easing
+                progress = ease_in_out(elapsed / duration)
+                # Interpolate from white to target color
+                r = int(lerp(255, base_color[0], progress))
+                g = int(lerp(255, base_color[1], progress))
+                b = int(lerp(255, base_color[2], progress))
+                return (r, g, b)
+            else:
+                # Animation complete
+                del self.cell_animations[cell_key]
+                return base_color
+        return base_color
+
     def draw_grid(self):
-        """Draw the Sudoku grid"""
+        """Draw the Sudoku grid with enhanced visuals and animations"""
+        # Draw background
+        pygame.draw.rect(self.screen, (248, 248, 248), (MARGIN, MARGIN, GRID_SIZE, GRID_SIZE))
+
         # Draw cells
         for i in range(9):
             for j in range(9):
                 x = MARGIN + j * CELL_SIZE
                 y = MARGIN + i * CELL_SIZE
 
-                # Highlight current solving cell
+                # Determine base color
                 if self.solving and self.current_cell == (i, j):
-                    pygame.draw.rect(self.screen, (255, 255, 150), (x, y, CELL_SIZE, CELL_SIZE))  # Yellow
-                # Highlight selected cell
+                    base_color = (255, 250, 200)  # Soft yellow
                 elif self.selected_cell == (i, j):
-                    pygame.draw.rect(self.screen, LIGHT_BLUE, (x, y, CELL_SIZE, CELL_SIZE))
-                # Highlight error cells
+                    base_color = (150, 220, 255)  # Enhanced blue
                 elif (i, j) in self.error_cells:
-                    pygame.draw.rect(self.screen, LIGHT_RED, (x, y, CELL_SIZE, CELL_SIZE))
+                    base_color = (255, 200, 200)  # Soft red
                 else:
-                    pygame.draw.rect(self.screen, WHITE, (x, y, CELL_SIZE, CELL_SIZE))
+                    base_color = WHITE
 
-                # Draw cell border
-                pygame.draw.rect(self.screen, BLACK, (x, y, CELL_SIZE, CELL_SIZE), 1)
+                # Apply animation if active
+                color = self.get_cell_color(i, j, base_color)
+                pygame.draw.rect(self.screen, color, (x, y, CELL_SIZE, CELL_SIZE))
 
-                # Draw number if present
+                # Draw cell border (thin)
+                pygame.draw.rect(self.screen, (180, 180, 180), (x, y, CELL_SIZE, CELL_SIZE), 1)
+
+                # Draw number if present with smooth fade-in
                 if self.grid[i][j] != 0:
                     text = FONT_MEDIUM.render(str(self.grid[i][j]), True, BLACK)
                     text_rect = text.get_rect(center=(x + CELL_SIZE // 2, y + CELL_SIZE // 2))
                     self.screen.blit(text, text_rect)
-        
-        # Draw thick lines for 3x3 boxes
+
+        # Draw grid lines with thickness for 3x3 boxes
+        box_color = (25, 55, 135)  # Dark blue for box separators
         for i in range(10):
             thickness = 3 if i % 3 == 0 else 1
+            line_color = box_color if i % 3 == 0 else (64, 64, 64)
             # Horizontal lines
-            pygame.draw.line(self.screen, BLACK,
+            pygame.draw.line(self.screen, line_color,
                            (MARGIN, MARGIN + i * CELL_SIZE),
                            (MARGIN + GRID_SIZE, MARGIN + i * CELL_SIZE),
                            thickness)
             # Vertical lines
-            pygame.draw.line(self.screen, BLACK,
+            pygame.draw.line(self.screen, line_color,
                            (MARGIN + i * CELL_SIZE, MARGIN),
                            (MARGIN + i * CELL_SIZE, MARGIN + GRID_SIZE),
                            thickness)
     
     def draw_buttons(self):
-        """Draw the control buttons in 2x2 grid"""
-        # Finalize button
-        pygame.draw.rect(self.screen, GREEN, self.finalize_button)
-        pygame.draw.rect(self.screen, BLACK, self.finalize_button, 2)
-        text = pygame.font.Font(None, 20).render("Finalize", True, WHITE)
-        text_rect = text.get_rect(center=self.finalize_button.center)
-        self.screen.blit(text, text_rect)
+        """Draw the control buttons in 2x2 grid with smooth hover transitions"""
+        btn_configs = [
+            (self.finalize_button, "Finalize", (76, 175, 80), (100, 200, 100)),      # Green
+            (self.clear_button, "Clear", (229, 57, 53), (255, 100, 100)),             # Red
+            (self.solve_algo_button, "Solve Algo", (66, 133, 244), (100, 160, 255)), # Blue
+            (self.solve_fast_button, "Solve Fast", (0, 188, 212), (100, 220, 255)),  # Cyan
+        ]
 
-        # Clear button
-        pygame.draw.rect(self.screen, RED, self.clear_button)
-        pygame.draw.rect(self.screen, BLACK, self.clear_button, 2)
-        text = pygame.font.Font(None, 20).render("Clear", True, WHITE)
-        text_rect = text.get_rect(center=self.clear_button.center)
-        self.screen.blit(text, text_rect)
+        for btn, label, btn_color, hover_color in btn_configs:
+            # Check if button is hovered
+            is_hovered = btn.collidepoint(self.mouse_pos)
 
-        # Solve Algo button (animated)
-        pygame.draw.rect(self.screen, BLUE, self.solve_algo_button)
-        pygame.draw.rect(self.screen, BLACK, self.solve_algo_button, 2)
-        text = pygame.font.Font(None, 20).render("Solve Algo", True, WHITE)
-        text_rect = text.get_rect(center=self.solve_algo_button.center)
-        self.screen.blit(text, text_rect)
+            # Smooth color interpolation on hover (simple lerp, no complex tracking needed)
+            # For smooth hover without tracking per-button, use instantaneous lerp based on state
+            color = hover_color if is_hovered else btn_color
 
-        # Solve Fast button
-        fast_color = (100, 180, 255)  # Lighter blue
-        pygame.draw.rect(self.screen, fast_color, self.solve_fast_button)
-        pygame.draw.rect(self.screen, BLACK, self.solve_fast_button, 2)
-        text = pygame.font.Font(None, 20).render("Solve Fast", True, WHITE)
-        text_rect = text.get_rect(center=self.solve_fast_button.center)
-        self.screen.blit(text, text_rect)
+            # Draw button shadow (3D effect, animate shadow on hover)
+            shadow_offset = 4 if is_hovered else 3
+            shadow_color = (80, 80, 80) if is_hovered else (100, 100, 100)
+            pygame.draw.rect(self.screen, shadow_color,
+                           (btn.x + shadow_offset, btn.y + shadow_offset, btn.width, btn.height))
+
+            # Draw button
+            pygame.draw.rect(self.screen, color, btn)
+            pygame.draw.rect(self.screen, BLACK, btn, 2)
+
+            # Draw label (larger, clearer font on hover for emphasis)
+            font_size = 22 if is_hovered else 20
+            text = pygame.font.Font(None, font_size).render(label, True, WHITE)
+            text_rect = text.get_rect(center=btn.center)
+            self.screen.blit(text, text_rect)
     
     def draw_message(self):
-        """Draw status message — left-aligned, between grid and buttons"""
+        """Draw status message with toast-style background"""
         if self.message:
             text = FONT_SMALL.render(self.message, True, self.message_color)
-            self.screen.blit(text, (MARGIN, MESSAGE_Y))
+            # Draw background box
+            padding = 8
+            bg_rect = text.get_rect(topleft=(MARGIN, MESSAGE_Y))
+            bg_rect.inflate_ip(2 * padding, 2 * padding)
+            pygame.draw.rect(self.screen, (245, 245, 245), bg_rect)
+            pygame.draw.rect(self.screen, (200, 200, 200), bg_rect, 1)
+            # Draw text
+            self.screen.blit(text, (MARGIN + padding, MESSAGE_Y + padding))
 
     def draw_solver_panel(self):
-        """Draw algorithm visualization panel on the right"""
+        """Draw algorithm visualization panel with metrics and progress bars"""
         if not self.solving and not self.show_final_panel:
             return
 
-        panel_x = MARGIN + GRID_SIZE + 20
+        panel_x = MARGIN + GRID_SIZE + PANEL_GAP
         panel_y = MARGIN
+        padding = 10
+        bar_height = 16
+        bar_width = PANEL_WIDTH - 2 * padding
 
-        # Panel background
-        pygame.draw.rect(self.screen, (240, 240, 240),
-                        (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE))
-        pygame.draw.rect(self.screen, DARK_GRAY,
-                        (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE), 2)
+        # Panel background and border
+        pygame.draw.rect(self.screen, (245, 245, 245), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE))
+        pygame.draw.rect(self.screen, (100, 150, 200), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE), 2)
 
-        # Title
-        title = FONT_SMALL.render("Algorithm State", True, BLACK)
-        self.screen.blit(title, (panel_x + 10, panel_y + 10))
+        # Title (clearer, larger)
+        title = pygame.font.Font(None, 26).render("Algorithm", True, (25, 55, 135))
+        self.screen.blit(title, (panel_x + padding, panel_y + 8))
+        title2 = pygame.font.Font(None, 24).render("Visualization", True, (25, 55, 135))
+        self.screen.blit(title2, (panel_x + padding, panel_y + 32))
 
-        y_offset = panel_y + 45
+        y_offset = panel_y + 60
 
-        # Current cell info
-        if self.current_cell:
+        # Current cell info (if solving)
+        if self.current_cell and (self.solving or self.show_final_panel):
             row, col = self.current_cell
-            cell_text = FONT_SMALL.render(f"Cell: ({row}, {col})", True, BLACK)
-            self.screen.blit(cell_text, (panel_x + 10, y_offset))
+            cell_label = pygame.font.Font(None, 20).render("Current Cell:", True, (66, 66, 66))
+            self.screen.blit(cell_label, (panel_x + padding, y_offset))
+            y_offset += 22
+            cell_text = pygame.font.Font(None, 32).render(f"({row}, {col})", True, (25, 55, 135))
+            self.screen.blit(cell_text, (panel_x + padding + 10, y_offset))
+            y_offset += 40
+
+        # Steps metric with progress bar and pulse animation
+        steps_label = pygame.font.Font(None, 20).render("Steps:", True, (66, 66, 66))
+        self.screen.blit(steps_label, (panel_x + padding, y_offset))
+
+        # Pulse animation on step change
+        step_scale = self.get_pulse_scale(self.step_pulse_time)
+        step_font_size = int(24 * step_scale)  # Larger base size
+        steps_value = pygame.font.Font(None, step_font_size).render(str(self.step_count), True, (76, 175, 80))
+        steps_rect = steps_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
+        self.screen.blit(steps_value, steps_rect)
+        y_offset += 28
+
+        # Steps progress bar (estimate: max 200 steps for visualization)
+        max_steps = 200
+        steps_pct = min(1.0, self.step_count / max_steps)
+        draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
+                         steps_pct, (76, 175, 80), (220, 240, 220))
+        y_offset += 32
+
+        # Backtracks metric with progress bar and pulse animation
+        back_label = pygame.font.Font(None, 20).render("Backtracks:", True, (66, 66, 66))
+        self.screen.blit(back_label, (panel_x + padding, y_offset))
+
+        # Pulse animation on backtrack change
+        back_scale = self.get_pulse_scale(self.backtrack_pulse_time)
+        back_font_size = int(24 * back_scale)  # Larger base size
+        back_value = pygame.font.Font(None, back_font_size).render(str(self.backtrack_count), True, (255, 152, 0))
+        back_rect = back_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
+        self.screen.blit(back_value, back_rect)
+        y_offset += 28
+
+        # Backtracks progress bar (estimate: max 50 backtracks)
+        max_backtracks = 50
+        backtrack_pct = min(1.0, self.backtrack_count / max_backtracks)
+        draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
+                         backtrack_pct, (255, 152, 0), (255, 230, 200))
+        y_offset += 38
+
+        # Candidates section
+        if self.candidates and self.solving:
+            cand_label = pygame.font.Font(None, 20).render("Valid Candidates:", True, (66, 66, 66))
+            self.screen.blit(cand_label, (panel_x + padding, y_offset))
+            y_offset += 25
+            candidates_str = " ".join(map(str, sorted(self.candidates)))
+            cand_text = pygame.font.Font(None, 26).render(candidates_str, True, (66, 133, 244))
+            self.screen.blit(cand_text, (panel_x + padding, y_offset))
             y_offset += 35
 
-        # Step count
-        step_text = FONT_SMALL.render(f"Steps: {self.step_count}", True, BLACK)
-        self.screen.blit(step_text, (panel_x + 10, y_offset))
-        y_offset += 30
-
-        # Backtrack count
-        back_text = FONT_SMALL.render(f"Backtracks: {self.backtrack_count}", True, RED)
-        self.screen.blit(back_text, (panel_x + 10, y_offset))
-        y_offset += 35
-
-        # Candidates
-        candidates_label = FONT_SMALL.render("Valid candidates:", True, BLACK)
-        self.screen.blit(candidates_label, (panel_x + 10, y_offset))
-        y_offset += 25
-
-        candidates_str = " ".join(map(str, sorted(self.candidates))) if self.candidates else "None"
-        cand_text = pygame.font.Font(None, 20).render(candidates_str, True, BLUE)
-        self.screen.blit(cand_text, (panel_x + 10, y_offset))
-        y_offset += 30
-
-        # Status
+        # Status indicator
         if self.show_final_panel:
             status = "COMPLETED"
-            status_color = GREEN
+            status_color = (76, 175, 80)
         elif self.solve_fast:
             status = "SOLVED (FAST)"
-            status_color = GREEN
+            status_color = (76, 175, 80)
         else:
             status = "PAUSED" if self.solve_paused else "SOLVING..."
-            status_color = DARK_GRAY if self.solve_paused else GREEN
+            status_color = (255, 152, 0) if self.solve_paused else (76, 175, 80)
 
-        status_text = FONT_SMALL.render(status, True, status_color)
-        self.screen.blit(status_text, (panel_x + 10, y_offset))
+        status_text = pygame.font.Font(None, 22).render(status, True, status_color)
+        self.screen.blit(status_text, (panel_x + padding, y_offset))
 
-        # Info text at bottom
+        # Info text at bottom (clearer, larger)
         info_font = pygame.font.Font(None, 16)
+        info_y = panel_y + GRID_SIZE - 85
+
         if self.show_final_panel:
-            info1 = info_font.render("Click button", True, DARK_GRAY)
-            info2 = info_font.render("to close panel", True, DARK_GRAY)
-            self.screen.blit(info1, (panel_x + 5, panel_y + GRID_SIZE - 75))
-            self.screen.blit(info2, (panel_x + 5, panel_y + GRID_SIZE - 55))
+            info_lines = ["Click any button", "to close panel"]
         elif self.solving and not self.solve_fast:
-            info1 = info_font.render("SPACE: pause/resume", True, DARK_GRAY)
-            info2 = info_font.render("UP/DOWN: speed", True, DARK_GRAY)
-            info3 = info_font.render("ESC: stop solver", True, DARK_GRAY)
-            self.screen.blit(info1, (panel_x + 5, panel_y + GRID_SIZE - 75))
-            self.screen.blit(info2, (panel_x + 5, panel_y + GRID_SIZE - 55))
-            self.screen.blit(info3, (panel_x + 5, panel_y + GRID_SIZE - 35))
+            info_lines = ["SPACE: pause/resume", "UP/DOWN: speed", "ESC: stop"]
+        else:
+            info_lines = []
+
+        for i, line in enumerate(info_lines):
+            text = info_font.render(line, True, (120, 120, 120))  # Slightly darker for clarity
+            self.screen.blit(text, (panel_x + padding, info_y + i * 20))
     
     def handle_click(self, pos):
         """Handle mouse click events"""
@@ -481,11 +598,13 @@ class SudokuGame:
             # Try numbers 1-9
             for num in self.candidates:
                 self.grid[row][col] = num
+                self.trigger_cell_animation(row, col, duration=150)  # Smooth fill animation
                 yield  # Show filled cell
                 if (yield from backtrack()):
                     return True
                 self.grid[row][col] = 0  # Backtrack
                 self.backtrack_count += 1
+                self.trigger_cell_animation(row, col, duration=100)  # Quick fade back
                 yield  # Show backtrack
 
             return False
@@ -507,6 +626,13 @@ class SudokuGame:
 
         try:
             next(self.solver_gen)
+            # Trigger pulse animations on stat changes
+            if self.step_count != self.last_step_count:
+                self.step_pulse_time = now
+                self.last_step_count = self.step_count
+            if self.backtrack_count != self.last_backtrack_count:
+                self.backtrack_pulse_time = now
+                self.last_backtrack_count = self.backtrack_count
         except StopIteration as e:
             result = e.value
             if result:
@@ -523,6 +649,29 @@ class SudokuGame:
 
         return False
     
+    def trigger_cell_animation(self, row, col, duration=200):
+        """Trigger a fill animation for a cell (smooth fade-in)"""
+        cell_key = (row, col)
+        self.cell_animations[cell_key] = {
+            'start_time': pygame.time.get_ticks(),
+            'duration': duration,
+            'type': 'fill'
+        }
+
+    def get_pulse_scale(self, pulse_time, duration=150):
+        """Get scale for pulse animation (1.0 = normal, peaks at ~1.1)"""
+        now = pygame.time.get_ticks()
+        elapsed = now - pulse_time
+        if elapsed > duration:
+            return 1.0
+        progress = ease_in_out(elapsed / duration)
+        # Peak at 0.5 of duration, then return to 1.0
+        peak = 1.1
+        if progress < 0.5:
+            return lerp(1.0, peak, progress * 2)
+        else:
+            return lerp(peak, 1.0, (progress - 0.5) * 2)
+
     def find_empty_cell(self):
         """Find the next empty cell (0)"""
         for i in range(9):
@@ -536,6 +685,9 @@ class SudokuGame:
         running = True
 
         while running:
+            # Track mouse position for hover effects
+            self.mouse_pos = pygame.mouse.get_pos()
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -549,7 +701,7 @@ class SudokuGame:
                 self.solve_step_by_step()
 
             # Draw everything
-            self.screen.fill(WHITE)
+            self.screen.fill((250, 250, 250))  # Light gray background
             self.draw_grid()
             self.draw_buttons()
             self.draw_message()
