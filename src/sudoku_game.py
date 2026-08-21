@@ -1,9 +1,6 @@
 import pygame
 import sys
-import json
-import random
 from collections import deque
-from pathlib import Path
 
 # Import all constants from constants module
 try:
@@ -20,6 +17,7 @@ try:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
     )
+    from .solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
 except ImportError:
     # Fallback for when imported via sys.path (from run.py)
     from constants import (
@@ -35,123 +33,7 @@ except ImportError:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
     )
-
-# ============================================================================
-# Puzzle Generation & File I/O Functions
-# ============================================================================
-
-def generate_complete_grid():
-    """Generate a complete, valid 9x9 Sudoku grid (all cells filled)"""
-    grid = [[0 for _ in range(9)] for _ in range(9)]
-
-    def is_valid(row, col, num):
-        # Check row
-        if num in grid[row]:
-            return False
-        # Check column
-        if num in [grid[i][col] for i in range(9)]:
-            return False
-        # Check 3x3 box
-        box_row, box_col = 3 * (row // 3), 3 * (col // 3)
-        for i in range(box_row, box_row + 3):
-            for j in range(box_col, box_col + 3):
-                if grid[i][j] == num:
-                    return False
-        return True
-
-    def solve():
-        for row in range(9):
-            for col in range(9):
-                if grid[row][col] == 0:
-                    # Try numbers in random order
-                    numbers = list(range(1, 10))
-                    random.shuffle(numbers)
-                    for num in numbers:
-                        if is_valid(row, col, num):
-                            grid[row][col] = num
-                            if solve():
-                                return True
-                            grid[row][col] = 0
-                    return False
-        return True
-
-    solve()
-    return grid
-
-def generate_puzzle(difficulty='medium'):
-    """Generate a puzzle by removing clues from a complete grid
-
-    difficulty: 'easy' (15 clues), 'medium' (27 clues), 'hard' (40 clues)
-    Returns: (puzzle_grid, solution_grid)
-    """
-    solution = generate_complete_grid()
-    puzzle = [row[:] for row in solution]  # Deep copy
-
-    # Difficulty mapping: (clues_to_keep)
-    difficulty_map = {
-        'easy': 15,
-        'medium': 27,
-        'hard': 40
-    }
-
-    clues_to_keep = difficulty_map.get(difficulty, 27)
-    clues_removed = 0
-    target_removes = 81 - clues_to_keep
-
-    # Remove clues randomly
-    while clues_removed < target_removes:
-        row = random.randint(0, 8)
-        col = random.randint(0, 8)
-        if puzzle[row][col] != 0:
-            puzzle[row][col] = 0
-            clues_removed += 1
-
-    return puzzle, solution
-
-def save_puzzle(puzzle, solution, difficulty, filepath):
-    """Save puzzle to JSON file
-
-    Args:
-        puzzle: 9x9 grid with 0s for empty cells
-        solution: 9x9 grid with complete solution
-        difficulty: 'easy', 'medium', or 'hard'
-        filepath: path to save file
-    """
-    import datetime
-    data = {
-        'puzzle': puzzle,
-        'solution': solution,
-        'difficulty': difficulty,
-        'clues': sum(1 for row in puzzle for cell in row if cell != 0),
-        'created': datetime.datetime.now().isoformat()
-    }
-
-    Path(filepath).parent.mkdir(parents=True, exist_ok=True)
-    with open(filepath, 'w') as f:
-        json.dump(data, f, indent=2)
-
-def load_puzzle(filepath):
-    """Load puzzle from JSON file
-
-    Returns: (puzzle_grid, solution_grid, difficulty, clues_count) or (None, None, None, None) on error
-    """
-    try:
-        with open(filepath, 'r') as f:
-            data = json.load(f)
-
-        # Validate data
-        if not isinstance(data.get('puzzle'), list) or len(data['puzzle']) != 9:
-            return None, None, None, None
-
-        puzzle = data['puzzle']
-        solution = data.get('solution', puzzle)  # Fallback if no solution
-        difficulty = data.get('difficulty', 'unknown')
-        clues = data.get('clues', sum(1 for row in puzzle for cell in row if cell != 0))
-
-        return puzzle, solution, difficulty, clues
-    except Exception as e:
-        print(f"Error loading puzzle: {e}")
-        return None, None, None, None
+    from solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
 
 class SudokuGame:
     def __init__(self):
@@ -849,59 +731,17 @@ class SudokuGame:
             self.message = ""
             self.error_cells.clear()
     
-    def is_valid_placement(self, row, col, num):
-        """Check if placing num at (row, col) is valid"""
-        if num == 0:
-            return True
-        
-        # Check row
-        for j in range(9):
-            if j != col and self.grid[row][j] == num:
-                return False
-        
-        # Check column
-        for i in range(9):
-            if i != row and self.grid[i][col] == num:
-                return False
-        
-        # Check 3x3 box
-        box_row, box_col = 3 * (row // 3), 3 * (col // 3)
-        for i in range(box_row, box_row + 3):
-            for j in range(box_col, box_col + 3):
-                if (i, j) != (row, col) and self.grid[i][j] == num:
-                    return False
-        
-        return True
-    
-    def find_errors(self):
-        """Find all cells with conflicts"""
-        errors = set()
-        
-        for i in range(9):
-            for j in range(9):
-                if self.grid[i][j] != 0:
-                    if not self.is_valid_placement(i, j, self.grid[i][j]):
-                        errors.add((i, j))
-        
-        return errors
-    
-    def is_complete(self):
-        """Check if grid is completely filled"""
-        for i in range(9):
-            for j in range(9):
-                if self.grid[i][j] == 0:
-                    return False
-        return True
     
     def finalize_puzzle(self):
         """Validate the puzzle — check Sudoku rules first, then completeness"""
-        errors = self.find_errors()
+        solver = SudokuSolver(self.grid)
+        errors = solver.find_errors()
 
         if errors:
             self.error_cells = errors
             self.message = f"Found {len(errors)} conflict(s)!"
             self.message_color = RED
-        elif not self.is_complete():
+        elif not solver.is_complete():
             self.error_cells.clear()
             self.message = "No conflicts, but puzzle is incomplete!"
             self.message_color = RED
@@ -940,10 +780,12 @@ class SudokuGame:
 
     def solve_fast_complete(self):
         """Solve instantly without animation"""
-        if self.solve_backtrack():
+        solver = SudokuSolver(self.grid)
+        if solver.solve_backtrack():
             self.message = "Puzzle solved instantly!"
             self.message_color = GREEN
             self.show_final_panel = True
+            self.grid = solver.grid
         else:
             self.message = "No solution exists!"
             self.message_color = RED
@@ -951,59 +793,39 @@ class SudokuGame:
         self.solving = False
         self.error_cells.clear()
 
-    def solve_backtrack(self):
-        """Standard backtracking solver without animation"""
-        empty = self.find_empty_cell()
-        if not empty:
-            return True
-
-        row, col = empty
-        for num in range(1, 10):
-            if self.is_valid_placement(row, col, num):
-                self.grid[row][col] = num
-                if self.solve_backtrack():
-                    return True
-                self.grid[row][col] = 0
-
-        return False
-
-    def get_candidates(self, row, col):
-        """Get list of valid numbers for a cell"""
-        candidates = []
-        for num in range(1, 10):
-            if self.is_valid_placement(row, col, num):
-                candidates.append(num)
-        return candidates
-
     def _solve_with_steps(self):
         """Generator that yields after each solve step for animation"""
-        def backtrack():
+        solver = SudokuSolver(self.grid)
+
+        def backtrack_with_ui():
             # Find empty cell
-            empty = self.find_empty_cell()
+            empty = solver.find_empty_cell()
             if not empty:
                 return True
 
             row, col = empty
             self.current_cell = (row, col)
-            self.candidates = self.get_candidates(row, col)
+            self.candidates = solver.get_candidates(row, col)
             self.step_count += 1
             yield  # Pause here to display this step
 
             # Try numbers 1-9
             for num in self.candidates:
-                self.grid[row][col] = num
+                solver.grid[row][col] = num
+                self.grid = solver.grid  # Keep game grid in sync
                 self.trigger_cell_animation(row, col, duration=150)  # Smooth fill animation
                 yield  # Show filled cell
-                if (yield from backtrack()):
+                if (yield from backtrack_with_ui()):
                     return True
-                self.grid[row][col] = 0  # Backtrack
+                solver.grid[row][col] = 0  # Backtrack
+                self.grid = solver.grid  # Keep game grid in sync
                 self.backtrack_count += 1
                 self.trigger_cell_animation(row, col, duration=100)  # Quick fade back
                 yield  # Show backtrack
 
             return False
 
-        result = yield from backtrack()
+        result = yield from backtrack_with_ui()
         return result
 
     def solve_step_by_step(self):
@@ -1066,14 +888,6 @@ class SudokuGame:
         else:
             return lerp(peak, 1.0, (progress - 0.5) * 2)
 
-    def find_empty_cell(self):
-        """Find the next empty cell (0)"""
-        for i in range(9):
-            for j in range(9):
-                if self.grid[i][j] == 0:
-                    return (i, j)
-        return None
-    
     def run(self):
         """Main game loop"""
         running = True
