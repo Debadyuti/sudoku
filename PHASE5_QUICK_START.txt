@@ -1,0 +1,285 @@
+═══════════════════════════════════════════════════════════════════════════════
+  PHASE 5: TESTING & ITERATION - QUICK START GUIDE
+═══════════════════════════════════════════════════════════════════════════════
+
+STATUS: ✅ All 122 unit tests passing
+NEXT:   🎮 Manual visual and interactive testing
+
+═══════════════════════════════════════════════════════════════════════════════
+  LAUNCH THE GAME
+═══════════════════════════════════════════════════════════════════════════════
+
+Open PowerShell in project directory and run:
+
+  cd C:\BOB\sudoku
+  uv run src/sudoku_game.py
+
+Window should open: 920x800px with menu bar at top
+
+═══════════════════════════════════════════════════════════════════════════════
+  KEYBOARD SHORTCUTS (FOR TESTING)
+═══════════════════════════════════════════════════════════════════════════════
+
+PUZZLE CREATION:
+  FILE → New Puzzle → Easy/Medium/Hard    (click menu or use keyboard)
+
+CELL ENTRY:
+  Click cell + type 1-9                   (enter number)
+  Arrow keys                              (move selection)
+  Tab / Shift+Tab                         (navigate cells)
+
+PUZZLE ACTIONS:
+  F                                       (Finalize - validate grid)
+  C                                       (Clear - clear all cells)
+
+SOLVING:
+  A                                       (Solve Algo - animated solving)
+  S                                       (Solve Fast - instant solve)
+  Space                                   (Pause/Resume during solving)
+  UP/DOWN arrows                          (Adjust animation speed)
+  ESC                                     (Stop solving)
+  Ctrl+C                                  (Copy stats to clipboard)
+
+═══════════════════════════════════════════════════════════════════════════════
+  TESTING CHECKLIST (FOLLOW ORDER)
+═══════════════════════════════════════════════════════════════════════════════
+
+PHASE 1: VISUAL INSPECTION (5 min)
+─────────────────────────────────
+1. Game window open?
+   ☐ 920x800px window visible
+   ☐ Menu bar at top (FILE | EDIT)
+
+2. Generate puzzle: FILE → New Puzzle → Medium
+   ☐ Grid visible with white background
+   ☐ Dark gray grid lines clear
+
+3. Colors look good?
+   ☐ Selected cell: Light blue (click a cell to see)
+   ☐ Buttons: Green, Red, Blue, Cyan (below grid)
+   ☐ No color clashing or harsh appearance
+
+4. Layout & spacing?
+   ☐ No overlapping UI elements
+   ☐ Algorithm panel (right side) visible
+   ☐ All buttons visible below grid
+
+PHASE 2: ANIMATIONS (10 min)
+──────────────────────────────
+1. Click different cells
+   ☐ Cell highlighting smooth (not jumpy)
+   ☐ Color fade looks natural
+
+2. Hover over buttons
+   ☐ Smooth color transition on hover
+   ☐ No lag when hovering
+
+3. Generate new puzzle (FILE → New Puzzle)
+   ☐ Message slides in smoothly from left
+
+4. Press A to start solving
+   ☐ Cells fill smoothly (not jittery)
+   ☐ Step counter increments smoothly
+   ☐ Progress bars update smoothly
+
+PHASE 3: ANIMATION SPEED (5 min)
+─────────────────────────────────
+1. Press A to start "Solve Algo" (animated)
+2. Look at right panel above "SOLVING..."
+   ☐ "Speed: 70%" displayed (initial)
+3. Press UP arrow (↑) multiple times
+   ☐ Speed increases: 70% → 80% → 90% → 100%
+   ☐ Animation gets faster as speed increases
+4. Press DOWN arrow (↓)
+   ☐ Speed decreases smoothly
+   ☐ Animation slows down
+
+PHASE 4: KEYBOARD SHORTCUTS (10 min)
+─────────────────────────────────────
+Generate puzzle (FILE → New Puzzle → Medium) first
+
+1. Number entry (1-9)
+   ☐ Click cell
+   ☐ Press 1 (appears in cell)
+   ☐ Try other numbers
+
+2. Navigation
+   ☐ Arrow keys move selection
+   ☐ Tab moves to next cell
+   ☐ Shift+Tab moves to previous
+
+3. Actions
+   ☐ F: Finalize (validates puzzle)
+   ☐ C: Clear (clears all numbers)
+   ☐ C again: Fill grid with random numbers first
+
+4. Solving
+   ☐ A: Start animated solver
+   ☐ Space: Pause/resume
+   ☐ UP/DOWN: Speed adjustment
+   ☐ ESC: Stop
+
+PHASE 5: MOUSE INTERACTION (10 min)
+────────────────────────────────────
+1. Click cells in grid
+   ☐ Immediate selection with blue color
+   ☐ Multiple rapid clicks handled smoothly
+
+2. Hover over buttons
+   ☐ Smooth color change on hover
+   ☐ No delay or stuttering
+
+3. Click buttons
+   ☐ Immediate response
+   ☐ Finalize: Shows validation result
+   ☐ Clear: Clears grid
+   ☐ Solve Algo: Starts animated solving
+   ☐ Solve Fast: Instant solve
+
+4. Menu interaction
+   ☐ Click FILE menu: dropdown appears
+   ☐ Hover over items: highlights appear
+   ☐ Click item: action executes
+   ☐ Click grid: menu closes
+
+PHASE 6: SOLVER MODES (15 min)
+───────────────────────────────
+1. Animated Solve (Solve Algo / A key)
+   ☐ Cells fill with smooth color transitions
+   ☐ Step counter pulses on updates
+   ☐ Speed adjustable with UP/DOWN
+   ☐ Can pause with Space
+   ☐ Completes with "COMPLETED" status
+
+2. Fast Solve (Solve Fast / S key)
+   ☐ Grid fills instantly
+   ☐ Status shows "SOLVED (FAST)"
+   ☐ Final panel displays statistics
+
+3. Pause/Resume
+   ☐ Start solver with A
+   ☐ Press Space: Status shows "PAUSED"
+   ☐ Press Space: Resumes smoothly
+
+4. Stop (ESC)
+   ☐ Start solver
+   ☐ Press ESC mid-solving
+   ☐ Status shows "READY"
+
+PHASE 7: FPS STABILITY (5 min)
+────────────────────────────────
+1. Press A to start Solve Algo
+2. Watch timer in algorithm panel
+   ☐ Timer increments smoothly
+   ☐ Animation smooth (no stutters)
+   ☐ No frame drops visible
+3. Let solver complete
+   ☐ Smooth until completion
+   ☐ No lag at end
+
+═══════════════════════════════════════════════════════════════════════════════
+  KEYBOARD HINTS LOCATION
+═══════════════════════════════════════════════════════════════════════════════
+
+During solving, bottom of algorithm panel (right side) shows:
+
+  SPACE: Pause   UP/DOWN: Speed   ESC: Stop
+
+These should be:
+  ✓ Capitalized (Pause, Speed, Stop)
+  ✓ Not overlapping with other text
+  ✓ Readable
+
+═══════════════════════════════════════════════════════════════════════════════
+  MATERIAL DESIGN COLORS (WHAT TO EXPECT)
+═══════════════════════════════════════════════════════════════════════════════
+
+Grid:
+  • White background (255, 255, 255)
+  • Dark gray lines (64, 64, 64)
+  • Light gray box borders (darker gray)
+
+Selected cell:     Light blue (150, 220, 255)
+Error cells:       Soft red (255, 205, 210)
+Solving cells:     Warm yellow (255, 245, 157)
+Frozen cells:      Light gray (238, 238, 238)
+
+Buttons:
+  Finalize:        Green (76, 175, 80)
+  Clear:           Red (244, 67, 54)
+  Solve Algo:      Blue (33, 150, 243)
+  Solve Fast:      Cyan (0, 188, 212)
+
+Accents:
+  Steps counter:   Green
+  Backtracks:      Orange (255, 152, 0)
+  Candidates:      Blue
+
+═══════════════════════════════════════════════════════════════════════════════
+  WHAT TO LOOK FOR (Good Signs ✓)
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ Animations smooth and natural
+✓ Colors look professional and cohesive
+✓ UI responsive to input (no lag)
+✓ No flickering or jank during animations
+✓ All shortcuts work as expected
+✓ Menu opens and closes smoothly
+✓ FPS stable during solving
+✓ Speed display updates in real-time
+✓ Animation speed changes immediately on arrow keys
+
+═══════════════════════════════════════════════════════════════════════════════
+  WHAT TO WATCH FOR (Problems ✗)
+═══════════════════════════════════════════════════════════════════════════════
+
+✗ Stuttering or jank in animations
+✗ Colors look washed out or harsh
+✗ Buttons not responding to clicks
+✗ UI elements overlapping or cut off
+✗ Missing capitalization in text
+✗ FPS drops below 60 during solving
+✗ Menu not opening on click
+✗ Speed display not updating
+✗ Keyboard shortcuts not working
+✗ Speed reaching only 90% (should reach 100%)
+
+═══════════════════════════════════════════════════════════════════════════════
+  ISSUES FOUND?
+═══════════════════════════════════════════════════════════════════════════════
+
+If you find an issue:
+1. Note the exact symptoms
+2. Document steps to reproduce
+3. Take a screenshot if visual
+4. Update PHASE5_TESTING_RESULTS.md
+5. File issue or notify developer
+
+═══════════════════════════════════════════════════════════════════════════════
+  DOCUMENTATION
+═══════════════════════════════════════════════════════════════════════════════
+
+• PHASE5_TESTING.md           - Full testing plan with detailed procedures
+• PHASE5_TESTING_RESULTS.md   - Testing results and issue tracking
+• TEXT_SELECTION_NOTES.md     - Technical notes on text selection
+• CLAUDE.md (project)         - Project instructions
+
+═══════════════════════════════════════════════════════════════════════════════
+  QUICK NOTES
+═══════════════════════════════════════════════════════════════════════════════
+
+• Animation speed formula: 100 - (step_delay // 10)
+  At 10ms delay = 100%, at 300ms delay = 70%
+
+• Timer behavior: Should freeze immediately when puzzle completes
+
+• Menu system: New Puzzle has ">" indicator, Load/Save don't have ellipsis
+
+• Text entry: Not mouse-selectable (Pygame limitation), but Ctrl+C copies stats
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Ready to test? Start with:
+  uv run src/sudoku_game.py
+
+Total testing time: 60-90 minutes
