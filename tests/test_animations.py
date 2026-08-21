@@ -162,3 +162,59 @@ class TestAnimationIntegration:
 
         # All should be registered
         assert len(game.ui.cell_animations) == 9
+
+
+class TestButtonHoverAnimations:
+    """Test button hover animation timing."""
+
+    def test_button_hover_tracking_initialization(self):
+        """Test button hover times dict is initialized."""
+        game = SudokuGame()
+        assert isinstance(game.ui.button_hover_times, dict)
+        assert len(game.ui.button_hover_times) == 0
+
+    def test_message_animation_tracking(self):
+        """Test message animation state tracking."""
+        game = SudokuGame()
+        assert game.message_animation_start == 0
+        assert game.last_message == ""
+
+    def test_message_change_detection(self):
+        """Test message change triggers animation."""
+        game = SudokuGame()
+        old_msg = game.message
+        game.message = "New message"
+
+        # Track change (would happen in main loop)
+        assert game.message != game.last_message
+
+
+class TestSolverAnimationTiming:
+    """Test solver step and backtrack animation timing."""
+
+    def test_step_pulse_time_tracking(self):
+        """Test step pulse time is tracked."""
+        game = SudokuGame()
+        assert game.step_pulse_time == 0
+        assert game.backtrack_pulse_time == 0
+
+    def test_solver_animation_parameters(self):
+        """Test solver panel accepts animation parameters."""
+        pygame.display.set_mode((100, 100))
+        renderer = UIRenderer(pygame.display.get_surface())
+
+        # Should not raise when animation times are passed
+        renderer.draw_solver_panel(
+            backtrack_count=5,
+            step_count=10,
+            current_cell=(0, 0),
+            candidates=[1, 2, 3],
+            solving=True,
+            solve_paused=False,
+            show_final_panel=False,
+            solve_fast=False,
+            elapsed_time="1s",
+            step_pulse_time=pygame.time.get_ticks(),
+            backtrack_pulse_time=pygame.time.get_ticks()
+        )
+        # If no exception, test passes

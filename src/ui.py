@@ -53,6 +53,7 @@ class UIRenderer:
         self.screen = screen
         self.cell_animations = {}  # Track animations for each cell
         self.button_rects = {}  # Cache button rectangles
+        self.button_hover_times = {}  # Track button hover start times for smooth transitions
 
     def draw_grid(self, grid, selected_cell, solving_cell, error_cells, solving_mode=False, frozen_cells=None):
         """Draw the Sudoku grid with enhanced visuals and animations.
