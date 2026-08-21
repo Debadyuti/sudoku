@@ -5,87 +5,36 @@ import random
 from collections import deque
 from pathlib import Path
 
-# Initialize Pygame
-pygame.init()
-
-# Constants
-WIDTH = 900
-HEIGHT = 800  # Increased to 800 to accommodate menu bar (30px) + existing UI
-# Menu bar
-MENU_HEIGHT = 30
-MENU_BAR_Y = 0
-
-GRID_SIZE = 540
-CELL_SIZE = GRID_SIZE // 9
-BUTTON_HEIGHT = 50
-BUTTON_WIDTH = 140
-MARGIN = 30
-PANEL_WIDTH = 260  # Right panel for algorithm visualization
-PANEL_GAP = 15    # Gap between grid and panel
-
-# Layout — derived from constants (all shifted down 30px for menu bar)
-GRID_TOP = MARGIN + MENU_HEIGHT            # 60
-GRID_BOTTOM = GRID_TOP + GRID_SIZE         # 600
-MESSAGE_Y   = GRID_BOTTOM + 20             # 620  — message zone top
-BUTTON_Y    = GRID_BOTTOM + 70             # 670  — button row top (row 1)
-BUTTON_Y2   = GRID_BOTTOM + 125            # 725  — button row 2
-# Two rows x two buttons grid: [Finalize, Clear] and [Solve Algo, Solve Fast]
-_BTN_GAP    = (GRID_SIZE - 2 * BUTTON_WIDTH) // 3  # Center buttons within grid area
-BUTTON_X1 = MARGIN + _BTN_GAP
-BUTTON_X2 = MARGIN + _BTN_GAP * 2 + BUTTON_WIDTH
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GRAY = (200, 200, 200)
-LIGHT_BLUE = (173, 216, 230)
-LIGHT_RED = (255, 182, 193)
-GREEN = (34, 139, 34)
-RED = (220, 20, 60)
-BLUE = (30, 144, 255)
-DARK_GRAY = (128, 128, 128)
-
-# Menu colors
-MENU_BG = (245, 245, 245)
-MENU_TEXT = (66, 66, 66)
-MENU_HOVER = (220, 240, 255)
-MENU_BORDER = (180, 180, 180)
-
-# Fonts
-FONT_LARGE = pygame.font.Font(None, 40)
-FONT_MEDIUM = pygame.font.Font(None, 32)
-FONT_SMALL = pygame.font.Font(None, 24)
-FONT_MENU = pygame.font.Font(None, 18)
-
-# Animation utilities
-def lerp(a, b, t):
-    """Linear interpolation between a and b, t in [0, 1]"""
-    t = max(0, min(1, t))
-    return a + (b - a) * t
-
-def ease_in_out(t):
-    """Smooth ease-in-out curve"""
-    t = max(0, min(1, t))
-    return t * t * (3 - 2 * t)
-
-def draw_progress_bar(surface, x, y, width, height, filled_pct, color, bg_color=(220, 220, 220)):
-    """Draw a progress bar. filled_pct: 0-1 (percentage filled)"""
-    filled_pct = max(0, min(1, filled_pct))
-    pygame.draw.rect(surface, bg_color, (x, y, width, height))
-    if filled_pct > 0:
-        filled_width = int(width * filled_pct)
-        pygame.draw.rect(surface, color, (x, y, filled_width, height))
-    pygame.draw.rect(surface, BLACK, (x, y, width, height), 1)  # Border
-
-def draw_rounded_rect(surface, color, rect, radius=5):
-    """Draw a rectangle with rounded corners"""
-    x, y, w, h = rect.x, rect.y, rect.width, rect.height
-    pygame.draw.rect(surface, color, (x + radius, y, w - 2*radius, h))
-    pygame.draw.rect(surface, color, (x, y + radius, w, h - 2*radius))
-    pygame.draw.circle(surface, color, (x + radius, y + radius), radius)
-    pygame.draw.circle(surface, color, (x + w - radius, y + radius), radius)
-    pygame.draw.circle(surface, color, (x + radius, y + h - radius), radius)
-    pygame.draw.circle(surface, color, (x + w - radius, y + h - radius), radius)
+# Import all constants from constants module
+try:
+    from .constants import (
+        WIDTH, HEIGHT, MENU_HEIGHT, MENU_BAR_Y,
+        GRID_SIZE, CELL_SIZE, MARGIN, PANEL_WIDTH, PANEL_GAP,
+        GRID_TOP, GRID_BOTTOM, MESSAGE_Y, BUTTON_Y, BUTTON_Y2,
+        BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
+        PANEL_X, PANEL_Y, PANEL_HEIGHT,
+        WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        GREEN, RED, BLUE, CYAN, ORANGE,
+        MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
+        FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+    )
+except ImportError:
+    # Fallback for when imported via sys.path (from run.py)
+    from constants import (
+        WIDTH, HEIGHT, MENU_HEIGHT, MENU_BAR_Y,
+        GRID_SIZE, CELL_SIZE, MARGIN, PANEL_WIDTH, PANEL_GAP,
+        GRID_TOP, GRID_BOTTOM, MESSAGE_Y, BUTTON_Y, BUTTON_Y2,
+        BUTTON_HEIGHT, BUTTON_WIDTH, BUTTON_X1, BUTTON_X2,
+        PANEL_X, PANEL_Y, PANEL_HEIGHT,
+        WHITE, BLACK, GRAY, LIGHT_GRAY, DARK_GRAY,
+        LIGHT_BLUE, LIGHT_RED, SOFT_YELLOW,
+        GREEN, RED, BLUE, CYAN, ORANGE,
+        MENU_BG, MENU_TEXT, MENU_HOVER, MENU_BORDER,
+        FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
+        lerp, ease_in_out, draw_progress_bar, draw_rounded_rect
+    )
 
 # ============================================================================
 # Puzzle Generation & File I/O Functions
