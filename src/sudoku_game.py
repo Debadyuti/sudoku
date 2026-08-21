@@ -101,6 +101,10 @@ class SudokuGame:
 
         # Phase 6.1: Hint System
         self.hint_candidates = []
+
+        # Phase 6.2: Puzzle Statistics
+        self.cells_filled_initially = 0  # Count of initial clues
+        self.solving_start_time = None  # When solve started
         self.panel_stat_update_time = 0  # Tracks panel animation timing
         self.message_animation_start = 0  # Tracks message slide-in timing
         self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
@@ -416,6 +420,9 @@ class SudokuGame:
         # Freeze user-entered cells (non-empty cells at solve time)
         self.frozen_cells = set((i, j) for i in range(9) for j in range(9) if self.grid[i][j] != 0)
 
+        # Track initial clue count for statistics (Phase 6.2)
+        self.cells_filled_initially = len(self.frozen_cells)
+
         # Initialize timer
         self.solver_start_time = pygame.time.get_ticks()
         self.solver_pause_time = None
@@ -485,6 +492,26 @@ class SudokuGame:
         if self.candidates:
             stats += f"\nCandidates: {' '.join(map(str, sorted(self.candidates)))}"
         return stats
+
+    def _get_extended_stats(self):
+        """Get extended statistics including time, progress, and difficulty.
+
+        Returns: dict with keys: steps, backtracks, time_ms, time_sec, solved, progress, difficulty
+        """
+        solve_time_ms = self.solver_final_time or 0
+        solved_cells = sum(1 for row in self.grid for cell in row if cell != 0)
+        total_empty = 81 - self.cells_filled_initially
+        progress_pct = (solved_cells - self.cells_filled_initially) / total_empty * 100 if total_empty > 0 else 100
+
+        return {
+            'steps': self.step_count,
+            'backtracks': self.backtrack_count,
+            'time_ms': solve_time_ms,
+            'time_sec': solve_time_ms / 1000.0,
+            'solved': solved_cells,
+            'progress': progress_pct,
+            'difficulty': self.puzzle_difficulty
+        }
 
     def solve_fast_complete(self):
         """Solve instantly without animation, tracking steps/backtracks"""
