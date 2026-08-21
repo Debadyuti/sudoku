@@ -249,17 +249,24 @@ class UIRenderer:
                          steps_pct, GREEN, (220, 240, 220))
         y_offset += 38
 
-        # Candidates section
-        if candidates and solving:
-            cand_label = pygame.font.Font(None, 20).render("Valid Candidates:", True, (66, 66, 66))
-            self.screen.blit(cand_label, (panel_x + padding, y_offset))
-            y_offset += 25
-            candidates_str = " ".join(map(str, sorted(candidates)))
-            cand_text = pygame.font.Font(None, 26).render(candidates_str, True, BLUE)
-            self.screen.blit(cand_text, (panel_x + padding, y_offset))
-            y_offset += 35
+        # Candidates section (scrollable content area)
+        # Max content area before status/timer section
+        max_content_y = panel_y + GRID_SIZE - 120
 
-        # Status indicator
+        if candidates and solving and y_offset < max_content_y:
+            cand_label = pygame.font.Font(None, 20).render("Valid Candidates:", True, (66, 66, 66))
+            if y_offset + 25 < max_content_y:
+                self.screen.blit(cand_label, (panel_x + padding, y_offset))
+                y_offset += 25
+                candidates_str = " ".join(map(str, sorted(candidates)))
+                cand_text = pygame.font.Font(None, 26).render(candidates_str, True, BLUE)
+                self.screen.blit(cand_text, (panel_x + padding, y_offset))
+
+        # Status and Timer at FIXED bottom (never move)
+        status_y = panel_y + GRID_SIZE - 90
+        info_y = panel_y + GRID_SIZE - 60
+
+        # Status indicator (fixed at bottom)
         if show_final_panel:
             status = "COMPLETED"
             status_color = GREEN
@@ -271,24 +278,24 @@ class UIRenderer:
             status_color = ORANGE if solve_paused else GREEN
 
         status_text = pygame.font.Font(None, 22).render(status, True, status_color)
-        self.screen.blit(status_text, (panel_x + padding, y_offset))
+        self.screen.blit(status_text, (panel_x + padding, status_y))
 
-        # Timer at bottom
+        # Timer at fixed bottom (right below status)
+        timer_y = status_y + 30
         timer_label = pygame.font.Font(None, 18).render("Time:", True, (66, 66, 66))
-        self.screen.blit(timer_label, (panel_x + padding, y_offset))
+        self.screen.blit(timer_label, (panel_x + padding, timer_y))
         timer_value = pygame.font.Font(None, 22).render(elapsed_time, True, BLUE)
-        timer_rect = timer_value.get_rect(topleft=(panel_x + padding + 70, y_offset))
+        timer_rect = timer_value.get_rect(topleft=(panel_x + padding + 70, timer_y))
         self.screen.blit(timer_value, timer_rect)
-        y_offset += 32
 
-        # Info text at bottom
+        # Info text at very bottom
         info_font = pygame.font.Font(None, 14)
-        info_y = panel_y + GRID_SIZE - 60
+        info_y = panel_y + GRID_SIZE - 30
 
         if show_final_panel:
-            info_lines = ["Click any button", "to close panel"]
+            info_lines = ["Click any button"]
         else:
-            info_lines = ["SPACE: pause/resume", "UP/DOWN: adjust speed", "ESC: stop"]
+            info_lines = ["SPACE: pause  UP/DOWN: speed  ESC: stop"]
 
         for line in info_lines:
             info_text = info_font.render(line, True, (100, 100, 100))
