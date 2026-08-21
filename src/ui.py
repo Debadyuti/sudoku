@@ -201,21 +201,21 @@ class UIRenderer:
         pygame.draw.rect(self.screen, (245, 245, 245), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE))
         pygame.draw.rect(self.screen, (100, 150, 200), (panel_x, panel_y, PANEL_WIDTH, GRID_SIZE), 2)
 
-        # Title
-        title = pygame.font.Font(None, 26).render("Algorithm", True, (25, 55, 135))
-        self.screen.blit(title, (panel_x + padding, panel_y + 8))
-        title2 = pygame.font.Font(None, 24).render("Visualization", True, (25, 55, 135))
-        self.screen.blit(title2, (panel_x + padding, panel_y + 32))
+        # Title (single line)
+        title = pygame.font.Font(None, 24).render("Algorithm Visualization", True, (25, 55, 135))
+        self.screen.blit(title, (panel_x + padding, panel_y + 12))
 
-        y_offset = panel_y + 60
+        y_offset = panel_y + 45
 
-        # Current cell info
+        # Current cell info (1,1-based indexing)
         if current_cell and (solving or show_final_panel):
             row, col = current_cell
+            display_row = row + 1  # Convert to 1-based
+            display_col = col + 1
             cell_label = pygame.font.Font(None, 20).render("Current Cell:", True, (66, 66, 66))
             self.screen.blit(cell_label, (panel_x + padding, y_offset))
             y_offset += 22
-            cell_text = pygame.font.Font(None, 32).render(f"({row}, {col})", True, (25, 55, 135))
+            cell_text = pygame.font.Font(None, 32).render(f"({display_row}, {display_col})", True, (25, 55, 135))
             self.screen.blit(cell_text, (panel_x + padding + 10, y_offset))
             y_offset += 40
 
@@ -288,19 +288,16 @@ class UIRenderer:
         timer_rect = timer_value.get_rect(topleft=(panel_x + padding + 70, timer_y))
         self.screen.blit(timer_value, timer_rect)
 
-        # Info text at very bottom
-        info_font = pygame.font.Font(None, 14)
-        info_y = panel_y + GRID_SIZE - 30
+        # Info text at very bottom (larger font)
+        info_font = pygame.font.Font(None, 18)
+        info_y = panel_y + GRID_SIZE - 28
 
         if show_final_panel:
-            info_lines = ["Click any button"]
+            info_text = info_font.render("Click any button", True, (100, 100, 100))
         else:
-            info_lines = ["SPACE: pause  UP/DOWN: speed  ESC: stop"]
+            info_text = info_font.render("SPACE: pause  UP/DOWN: speed  ESC: stop", True, (100, 100, 100))
 
-        for line in info_lines:
-            info_text = info_font.render(line, True, (100, 100, 100))
-            self.screen.blit(info_text, (panel_x + padding, info_y))
-            info_y += 16
+        self.screen.blit(info_text, (panel_x + padding, info_y))
 
     def draw_menu_bar(self):
         """Draw menu bar background and text."""

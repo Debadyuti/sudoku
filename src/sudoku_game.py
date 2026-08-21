@@ -183,6 +183,23 @@ class SudokuGame:
     
     def handle_key(self, key, mod=0):
         """Handle keyboard input"""
+        # --- Copy stats with Ctrl+C ---
+        if (mod & pygame.KMOD_CTRL) and key == pygame.K_c:
+            if self.solving or self.show_final_panel:
+                stats = self._get_solver_stats()
+                try:
+                    import subprocess
+                    # Copy to clipboard (cross-platform)
+                    process = subprocess.Popen(['clip'], stdin=subprocess.PIPE, shell=True)
+                    process.communicate(stats.encode('utf-8'))
+                    self.message = "Stats copied to clipboard!"
+                    self.message_color = GREEN
+                except Exception:
+                    # Fallback if clipboard not available
+                    self.message = f"Stats: {stats[:50]}..."
+                    self.message_color = BLUE
+            return
+
         # --- Handle difficulty selection ---
         if self.waiting_for_difficulty:
             if key == pygame.K_e:  # Easy
@@ -317,6 +334,14 @@ class SudokuGame:
     
     def solve_puzzle(self, animated=True):
         """Start solving: animated step-by-step or fast"""
+        # Check if puzzle is already complete
+        solver = SudokuSolver(self.grid)
+        if solver.is_complete():
+            self.message = "Puzzle is already complete!"
+            self.message_color = BLUE
+            self.show_final_panel = False
+            return
+
         self.solving = True
         self.solve_fast = not animated
         self.solve_paused = False
@@ -379,6 +404,21 @@ class SudokuGame:
             return f"{minutes}m {remaining_seconds}s"
         else:
             return f"{seconds}s"
+
+    def _get_solver_stats(self):
+        """Get formatted solver statistics for copying.
+
+        Returns: formatted string with all solver stats
+        """
+        elapsed_ms = self.get_solver_elapsed_time()
+        elapsed_str = self.format_solver_time(elapsed_ms)
+        stats = f"Steps: {self.step_count}\nBacktracks: {self.backtrack_count}\nTime: {elapsed_str}"
+        if self.current_cell:
+            row, col = self.current_cell
+            stats += f"\nCurrent Cell: ({row+1}, {col+1})"
+        if self.candidates:
+            stats += f"\nCandidates: {' '.join(map(str, sorted(self.candidates)))}"
+        return stats
 
     def solve_fast_complete(self):
         """Solve instantly without animation"""
