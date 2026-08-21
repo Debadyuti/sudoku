@@ -443,7 +443,7 @@ class UIRenderer:
 
     def _draw_file_menu(self, menu_hover_index, submenu_open, submenu_hover_index):
         """Draw FILE dropdown menu with improved styling."""
-        menu_items = ['New Puzzle', 'Load Puzzle...', 'Save Puzzle...', 'Exit']
+        menu_items = ['New Puzzle', 'Load Puzzle', 'Save Puzzle', 'Exit']
         item_height = 32
         menu_width = 160
         menu_x = 10
@@ -461,8 +461,9 @@ class UIRenderer:
             if menu_hover_index == i:
                 pygame.draw.rect(self.screen, (220, 230, 250), (menu_x, item_y, menu_width, item_height))
 
-            # Text with better contrast
-            text = FONT_MENU.render(item, True, (50, 50, 50))
+            # Add visual cue (>) for submenu items
+            display_text = item + " >" if i == 0 else item
+            text = FONT_MENU.render(display_text, True, (50, 50, 50))
             self.screen.blit(text, (menu_x + 12, item_y + 8))
 
         # Draw New Puzzle submenu if open
