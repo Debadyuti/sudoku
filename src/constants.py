@@ -57,27 +57,27 @@ GRAY = (200, 200, 200)
 LIGHT_GRAY = (220, 220, 220)
 DARK_GRAY = (128, 128, 128)
 
-# Grid colors
-LIGHT_BLUE = (173, 216, 230)     # Selected cell
-LIGHT_RED = (255, 182, 193)      # Error cell
-SOFT_YELLOW = (255, 250, 200)    # Solving cell
-FROZEN_BG = (230, 230, 230)      # Frozen cell background (greyed out)
+# Grid colors (Material Design palette)
+LIGHT_BLUE = (150, 220, 255)     # Selected cell - more saturated
+LIGHT_RED = (255, 205, 210)      # Error cell - softer red
+SOFT_YELLOW = (255, 245, 157)    # Solving cell - warmer yellow
+FROZEN_BG = (238, 238, 238)      # Frozen cell background - lighter gray
 FROZEN_TEXT = (30, 144, 255)     # Frozen cell text (blue)
 
-# Button colors
-GREEN = (34, 139, 34)             # Finalize (hover: #64C864)
-RED = (220, 20, 60)               # Clear
-BLUE = (30, 144, 255)             # Solve Algo
-CYAN = (0, 188, 212)              # Solve Fast
+# Button colors (Material Design)
+GREEN = (76, 175, 80)             # Finalize - Material Green 500
+RED = (244, 67, 54)               # Clear - Material Red 500
+BLUE = (33, 150, 243)             # Solve Algo - Material Blue 500
+CYAN = (0, 188, 212)              # Solve Fast - Material Cyan 500
 
 # Menu colors
-MENU_BG = (245, 245, 245)
+MENU_BG = (250, 250, 250)
 MENU_TEXT = (66, 66, 66)
-MENU_HOVER = (220, 240, 255)
-MENU_BORDER = (180, 180, 180)
+MENU_HOVER = (225, 245, 254)     # Enhanced light blue
+MENU_BORDER = (189, 189, 189)
 
 # Accent colors (for stats and indicators)
-ORANGE = (255, 152, 0)            # Backtracks indicator
+ORANGE = (255, 152, 0)            # Backtracks - Material Orange 500
 
 # ============================================================================
 # Fonts
