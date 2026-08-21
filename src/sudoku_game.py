@@ -425,19 +425,29 @@ class SudokuGame:
         return stats
 
     def solve_fast_complete(self):
-        """Solve instantly without animation"""
-        solver = SudokuSolver(self.grid)
-        if solver.solve_backtrack():
-            self.message = "Puzzle solved instantly!"
-            self.message_color = GREEN
-            self.show_final_panel = True
-            self.grid = solver.grid
-        else:
-            self.message = "No solution exists!"
-            self.message_color = RED
-            self.show_final_panel = True
+        """Solve instantly without animation, tracking steps/backtracks"""
+        # Use _solve_with_steps but consume all yields without animation to track metrics
+        gen = self._solve_with_steps()
+        try:
+            while True:
+                next(gen)
+        except StopIteration as e:
+            result = e.value
+            if result:
+                self.message = f"Puzzle solved! {self.step_count} steps, {self.backtrack_count} backtracks"
+                self.message_color = GREEN
+                self.show_final_panel = True
+            else:
+                self.message = "No solution exists!"
+                self.message_color = RED
+                self.show_final_panel = True
+
         self.solving = False
         self.error_cells.clear()
+
+        # Stop timer immediately for fast solve
+        if self.solver_start_time is not None:
+            self.solver_pause_time = 0  # Immediate stop (show minimal time)
 
     def _solve_with_steps(self):
         """Generator that yields after each solve step for animation"""
