@@ -2,6 +2,8 @@
 
 A fully-featured Sudoku game built with Python and Pygame, featuring a modern UI with smooth animations, user input validation, error highlighting, and an educational algorithm visualizer.
 
+📚 **Complete Documentation**: See [design/README.md](./design/README.md) for detailed design docs, user guides, and algorithm analysis.
+
 ## Features
 
 ✅ **Modern UI Design** - Clean interface with Material Design colors and smooth animations  
@@ -39,12 +41,12 @@ A fully-featured Sudoku game built with Python and Pygame, featuring a modern UI
 Navigate to the project directory and run:
 
 ```bash
-python sudoku_game.py
+python run.py
 ```
 
 Or with uv:
 ```bash
-uv run python sudoku_game.py
+uv run python run.py
 ```
 
 ## How to Play
@@ -159,15 +161,30 @@ The animation helps visualize this process by:
 - Counting steps and backtracks
 - Allowing you to pause and examine the algorithm state at any point
 
-## Application Structure
+## Project Structure
 
 ```
 sudoku/
-├── sudoku_game.py         # Main application with educational solver
-├── pyproject.toml         # Project metadata and dependencies
-├── README.md              # This file
-├── CLAUDE.md              # Redirect to AGENTS.md
-└── AGENTS.md              # Agent and coding instructions
+├── src/
+│   └── sudoku_game.py              # Main application (1,081 lines)
+├── test/
+│   ├── test_*.py                   # Test scripts
+│   ├── *_FIX.md                    # Debug and fix documentation
+│   └── *_test.md                   # Test documentation
+├── design/
+│   ├── README.md                   # Design docs hub
+│   ├── QUICK_START.md              # User guide
+│   ├── MENU_SYSTEM_IMPLEMENTATION.md
+│   └── [other design docs]
+├── sudoku-legacy/
+│   ├── sudoku3.c                   # Original C solver (2006)
+│   └── sudoku-legacy-analysis.md   # Comparative analysis
+├── run.py                          # Launcher script
+├── README.md                        # This file (user documentation)
+├── CLAUDE.md                        # Redirect to AGENTS.md
+├── AGENTS.md                        # Agent and coding instructions
+├── pyproject.toml                   # Project metadata and dependencies
+└── pyproject.lock                   # Locked dependencies
 ```
 
 ## Technical Details

@@ -1,5 +1,65 @@
 # Agent and Coding Instructions for Sudoku Project
 
+## Project Organization
+
+### Folder Structure Convention
+
+```
+sudoku/
+├── src/                      # Source code
+│   └── sudoku_game.py        # Main application
+├── test/                     # Test files and debug-related docs
+│   ├── test_*.py             # Test scripts
+│   ├── *_test.md             # Debug/test documentation
+│   └── debug_logs/           # Temporary debug output
+├── design/                   # Design and architectural documentation
+│   ├── QUICK_START.md
+│   ├── MENU_SYSTEM_IMPLEMENTATION.md
+│   ├── UI_ENHANCEMENT_LOG.md
+│   └── [other design docs]
+├── sudoku-legacy/            # Legacy code and analysis
+│   ├── sudoku3.c
+│   └── sudoku-legacy-analysis.md
+├── README.md                 # User documentation
+├── CLAUDE.md                 # Points to AGENTS.md
+├── AGENTS.md                 # Agent instructions (this file)
+├── pyproject.toml            # Project metadata and dependencies
+└── pyproject.lock            # Locked dependencies
+```
+
+### Organization Rules
+
+- **`src/`**: All production source code goes here
+  - Main application code
+  - Core algorithms
+  - Utility functions
+  
+- **`test/`**: All test and debug-related files
+  - Unit tests (`test_*.py`)
+  - Integration tests
+  - Debug/test documentation (`*_test.md`, `*_fix.md`)
+  - Temporary test data
+  
+- **`design/`**: All design and architectural documentation
+  - Feature specifications
+  - Implementation guides
+  - Enhancement logs
+  - Architecture decisions
+  - User guides and quick starts
+  
+- **`sudoku-legacy/`**: Legacy code and historical analysis
+  - Original C solver code
+  - Comparative analysis documents
+  
+- **Root level**: Only critical files
+  - `README.md` - User-facing documentation
+  - `CLAUDE.md` - Project instructions pointer
+  - `AGENTS.md` - This file
+  - `pyproject.toml` - Dependencies
+  - `.gitignore` - Git configuration
+
+---
+
 ## Core Principles
 
 - Work incrementally in small, simple steps

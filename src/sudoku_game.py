@@ -1,13 +1,20 @@
 import pygame
 import sys
+import json
+import random
 from collections import deque
+from pathlib import Path
 
 # Initialize Pygame
 pygame.init()
 
 # Constants
 WIDTH = 900
-HEIGHT = 750  # Increased from 700 to prevent button overflow
+HEIGHT = 800  # Increased to 800 to accommodate menu bar (30px) + existing UI
+# Menu bar
+MENU_HEIGHT = 30
+MENU_BAR_Y = 0
+
 GRID_SIZE = 540
 CELL_SIZE = GRID_SIZE // 9
 BUTTON_HEIGHT = 50
@@ -16,11 +23,12 @@ MARGIN = 30
 PANEL_WIDTH = 260  # Right panel for algorithm visualization
 PANEL_GAP = 15    # Gap between grid and panel
 
-# Layout — derived from constants so everything stays in sync
-GRID_BOTTOM = MARGIN + GRID_SIZE          # 570
-MESSAGE_Y   = GRID_BOTTOM + 20           # 590  — message zone top (increased gap)
-BUTTON_Y    = GRID_BOTTOM + 70           # 640  — button row top (row 1, more space)
-BUTTON_Y2   = GRID_BOTTOM + 125          # 695  — button row 2 (more space between)
+# Layout — derived from constants (all shifted down 30px for menu bar)
+GRID_TOP = MARGIN + MENU_HEIGHT            # 60
+GRID_BOTTOM = GRID_TOP + GRID_SIZE         # 600
+MESSAGE_Y   = GRID_BOTTOM + 20             # 620  — message zone top
+BUTTON_Y    = GRID_BOTTOM + 70             # 670  — button row top (row 1)
+BUTTON_Y2   = GRID_BOTTOM + 125            # 725  — button row 2
 # Two rows x two buttons grid: [Finalize, Clear] and [Solve Algo, Solve Fast]
 _BTN_GAP    = (GRID_SIZE - 2 * BUTTON_WIDTH) // 3  # Center buttons within grid area
 BUTTON_X1 = MARGIN + _BTN_GAP
@@ -37,10 +45,17 @@ RED = (220, 20, 60)
 BLUE = (30, 144, 255)
 DARK_GRAY = (128, 128, 128)
 
+# Menu colors
+MENU_BG = (245, 245, 245)
+MENU_TEXT = (66, 66, 66)
+MENU_HOVER = (220, 240, 255)
+MENU_BORDER = (180, 180, 180)
+
 # Fonts
 FONT_LARGE = pygame.font.Font(None, 40)
 FONT_MEDIUM = pygame.font.Font(None, 32)
 FONT_SMALL = pygame.font.Font(None, 24)
+FONT_MENU = pygame.font.Font(None, 18)
 
 # Animation utilities
 def lerp(a, b, t):
@@ -72,6 +87,123 @@ def draw_rounded_rect(surface, color, rect, radius=5):
     pygame.draw.circle(surface, color, (x + radius, y + h - radius), radius)
     pygame.draw.circle(surface, color, (x + w - radius, y + h - radius), radius)
 
+# ============================================================================
+# Puzzle Generation & File I/O Functions
+# ============================================================================
+
+def generate_complete_grid():
+    """Generate a complete, valid 9x9 Sudoku grid (all cells filled)"""
+    grid = [[0 for _ in range(9)] for _ in range(9)]
+
+    def is_valid(row, col, num):
+        # Check row
+        if num in grid[row]:
+            return False
+        # Check column
+        if num in [grid[i][col] for i in range(9)]:
+            return False
+        # Check 3x3 box
+        box_row, box_col = 3 * (row // 3), 3 * (col // 3)
+        for i in range(box_row, box_row + 3):
+            for j in range(box_col, box_col + 3):
+                if grid[i][j] == num:
+                    return False
+        return True
+
+    def solve():
+        for row in range(9):
+            for col in range(9):
+                if grid[row][col] == 0:
+                    # Try numbers in random order
+                    numbers = list(range(1, 10))
+                    random.shuffle(numbers)
+                    for num in numbers:
+                        if is_valid(row, col, num):
+                            grid[row][col] = num
+                            if solve():
+                                return True
+                            grid[row][col] = 0
+                    return False
+        return True
+
+    solve()
+    return grid
+
+def generate_puzzle(difficulty='medium'):
+    """Generate a puzzle by removing clues from a complete grid
+
+    difficulty: 'easy' (15 clues), 'medium' (27 clues), 'hard' (40 clues)
+    Returns: (puzzle_grid, solution_grid)
+    """
+    solution = generate_complete_grid()
+    puzzle = [row[:] for row in solution]  # Deep copy
+
+    # Difficulty mapping: (clues_to_keep)
+    difficulty_map = {
+        'easy': 15,
+        'medium': 27,
+        'hard': 40
+    }
+
+    clues_to_keep = difficulty_map.get(difficulty, 27)
+    clues_removed = 0
+    target_removes = 81 - clues_to_keep
+
+    # Remove clues randomly
+    while clues_removed < target_removes:
+        row = random.randint(0, 8)
+        col = random.randint(0, 8)
+        if puzzle[row][col] != 0:
+            puzzle[row][col] = 0
+            clues_removed += 1
+
+    return puzzle, solution
+
+def save_puzzle(puzzle, solution, difficulty, filepath):
+    """Save puzzle to JSON file
+
+    Args:
+        puzzle: 9x9 grid with 0s for empty cells
+        solution: 9x9 grid with complete solution
+        difficulty: 'easy', 'medium', or 'hard'
+        filepath: path to save file
+    """
+    import datetime
+    data = {
+        'puzzle': puzzle,
+        'solution': solution,
+        'difficulty': difficulty,
+        'clues': sum(1 for row in puzzle for cell in row if cell != 0),
+        'created': datetime.datetime.now().isoformat()
+    }
+
+    Path(filepath).parent.mkdir(parents=True, exist_ok=True)
+    with open(filepath, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def load_puzzle(filepath):
+    """Load puzzle from JSON file
+
+    Returns: (puzzle_grid, solution_grid, difficulty, clues_count) or (None, None, None, None) on error
+    """
+    try:
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+
+        # Validate data
+        if not isinstance(data.get('puzzle'), list) or len(data['puzzle']) != 9:
+            return None, None, None, None
+
+        puzzle = data['puzzle']
+        solution = data.get('solution', puzzle)  # Fallback if no solution
+        difficulty = data.get('difficulty', 'unknown')
+        clues = data.get('clues', sum(1 for row in puzzle for cell in row if cell != 0))
+
+        return puzzle, solution, difficulty, clues
+    except Exception as e:
+        print(f"Error loading puzzle: {e}")
+        return None, None, None, None
+
 class SudokuGame:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -80,6 +212,7 @@ class SudokuGame:
 
         # Game state
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
+        self.solution = [[0 for _ in range(9)] for _ in range(9)]  # Solution grid for generated puzzles
         self.selected_cell = (0, 0)  # Auto-select top-left cell on startup
         self.error_cells = set()
         self.message = "Ready to play - Enter numbers in selected cell"
@@ -115,6 +248,12 @@ class SudokuGame:
         self.last_backtrack_count = 0  # For pulse animation on stat change
         self.step_pulse_time = 0  # Time when last pulse animation started
         self.backtrack_pulse_time = 0  # Time when last pulse animation started
+
+        # Menu state
+        self.menu_open = None  # 'FILE', 'EDIT', or None
+        self.menu_hover_index = -1  # Which menu item is hovered
+        self.submenu_open = None  # 'NEW_PUZZLE' or None (for submenus)
+        self.submenu_hover_index = -1  # Which submenu item is hovered
         
     def get_cell_color(self, row, col, base_color):
         """Get cell color with smooth animation fade-in effect"""
@@ -141,16 +280,305 @@ class SudokuGame:
                 return base_color
         return base_color
 
+    def draw_menu_bar(self):
+        """Draw menu bar background and text only (dropdown drawn later)"""
+        # Background
+        pygame.draw.rect(self.screen, MENU_BG, (0, 0, WIDTH, MENU_HEIGHT))
+        pygame.draw.line(self.screen, MENU_BORDER, (0, MENU_HEIGHT), (WIDTH, MENU_HEIGHT), 1)
+
+        # Menu items
+        file_text = FONT_MENU.render("FILE", True, MENU_TEXT)
+        edit_text = FONT_MENU.render("EDIT", True, MENU_TEXT)
+
+        self.screen.blit(file_text, (10, 6))
+        self.screen.blit(edit_text, (65, 6))
+
+    def update_menu_hover(self):
+        """Update menu hover state based on mouse position"""
+        x, y = self.mouse_pos
+
+        # Update menu hover if menu is open
+        if self.menu_open == 'FILE':
+            # Check if mouse is over submenu (New Puzzle submenu is at x >= 190)
+            if x >= 190 and y >= MENU_HEIGHT:
+                # Mouse is over submenu area - keep "New Puzzle" (index 0) highlighted
+                self.menu_hover_index = 0
+                self.submenu_hover_index = (y - MENU_HEIGHT) // 30
+            elif 10 < x < 190 and y >= MENU_HEIGHT:
+                # Mouse is over main menu items
+                self.menu_hover_index = (y - MENU_HEIGHT) // 30
+                self.submenu_hover_index = -1
+            else:
+                # Mouse is not over menu
+                self.menu_hover_index = -1
+                self.submenu_hover_index = -1
+        elif self.menu_open == 'EDIT':
+            if 65 < x < 215 and y >= MENU_HEIGHT:
+                self.menu_hover_index = (y - MENU_HEIGHT) // 30
+            else:
+                self.menu_hover_index = -1
+        else:
+            self.menu_hover_index = -1
+            self.submenu_hover_index = -1
+
+    def draw_menu_dropdowns(self):
+        """Draw menu dropdown overlays (called last so they appear on top)"""
+        # Update hover states based on current mouse position
+        self.update_menu_hover()
+
+        if self.menu_open == 'FILE':
+            self._draw_file_menu()
+        elif self.menu_open == 'EDIT':
+            self._draw_edit_menu()
+
+    def _draw_file_menu(self):
+        """Draw File dropdown menu with submenus"""
+        menu_items = ['New Puzzle', 'Load Puzzle...', 'Save Puzzle...', 'Exit']
+        item_height = 30
+        menu_width = 180
+        menu_x = 10
+        menu_y = MENU_HEIGHT
+
+        # Draw menu background
+        total_height = len(menu_items) * item_height
+        pygame.draw.rect(self.screen, WHITE, (menu_x, menu_y, menu_width, total_height))
+        pygame.draw.rect(self.screen, MENU_BORDER, (menu_x, menu_y, menu_width, total_height), 1)
+
+        # Draw items
+        for i, item in enumerate(menu_items):
+            item_y = menu_y + i * item_height
+            # Hover highlight
+            if self.menu_hover_index == i:
+                pygame.draw.rect(self.screen, MENU_HOVER, (menu_x, item_y, menu_width, item_height))
+            # Text
+            text = FONT_MENU.render(item, True, MENU_TEXT)
+            self.screen.blit(text, (menu_x + 10, item_y + 6))
+
+            # Draw arrow indicator for items with submenus
+            if i == 0:  # New Puzzle has submenu
+                arrow = FONT_MENU.render("▶", True, MENU_TEXT)
+                self.screen.blit(arrow, (menu_x + menu_width - 20, item_y + 6))
+
+        # Draw submenu if "New Puzzle" is hovered
+        if self.menu_hover_index == 0:
+            self._draw_new_puzzle_submenu(menu_x + menu_width, menu_y)
+
+    def _draw_new_puzzle_submenu(self, x, y):
+        """Draw New Puzzle submenu with difficulty levels"""
+        submenu_items = ['Easy (E)', 'Medium (M)', 'Hard (H)']
+        item_height = 30
+        submenu_width = 150
+
+        # Draw submenu background
+        total_height = len(submenu_items) * item_height
+        pygame.draw.rect(self.screen, WHITE, (x, y, submenu_width, total_height))
+        pygame.draw.rect(self.screen, MENU_BORDER, (x, y, submenu_width, total_height), 1)
+
+        # Draw items
+        for i, item in enumerate(submenu_items):
+            item_y = y + i * item_height
+            # Hover highlight
+            if self.submenu_hover_index == i:
+                pygame.draw.rect(self.screen, MENU_HOVER, (x, item_y, submenu_width, item_height))
+            # Text
+            text = FONT_MENU.render(item, True, MENU_TEXT)
+            self.screen.blit(text, (x + 10, item_y + 6))
+
+    def _draw_edit_menu(self):
+        """Draw Edit dropdown menu"""
+        menu_items = ['Clear Grid']
+        item_height = 30
+        menu_width = 150
+        menu_x = 65
+        menu_y = MENU_HEIGHT
+
+        # Draw menu background
+        total_height = len(menu_items) * item_height
+        pygame.draw.rect(self.screen, WHITE, (menu_x, menu_y, menu_width, total_height))
+        pygame.draw.rect(self.screen, MENU_BORDER, (menu_x, menu_y, menu_width, total_height), 1)
+
+        # Draw items
+        for i, item in enumerate(menu_items):
+            item_y = menu_y + i * item_height
+            # Hover highlight
+            if self.menu_hover_index == i:
+                pygame.draw.rect(self.screen, MENU_HOVER, (menu_x, item_y, menu_width, item_height))
+            # Text
+            text = FONT_MENU.render(item, True, MENU_TEXT)
+            self.screen.blit(text, (menu_x + 10, item_y + 6))
+
+    def handle_menu_click(self, mouse_pos):
+        """Handle menu bar and submenu clicks"""
+        x, y = mouse_pos
+
+        # Check if click in menu bar
+        if y < MENU_HEIGHT:
+            if 10 < x < 55:  # FILE menu
+                self.menu_open = 'FILE' if self.menu_open != 'FILE' else None
+                self.menu_hover_index = -1
+                self.submenu_open = None
+                self.submenu_hover_index = -1
+                return True
+            elif 65 < x < 115:  # EDIT menu
+                self.menu_open = 'EDIT' if self.menu_open != 'EDIT' else None
+                self.menu_hover_index = -1
+                self.submenu_open = None
+                self.submenu_hover_index = -1
+                return True
+        # Check if click on submenu item (New Puzzle submenu at x >= 190)
+        elif self.menu_open == 'FILE' and x >= 190 and y >= MENU_HEIGHT and y < MENU_HEIGHT + 90:
+            # Submenu has 3 items, each 30px high
+            submenu_item_index = (y - MENU_HEIGHT) // 30
+            if 0 <= submenu_item_index < 3:  # 3 items in NEW PUZZLE submenu
+                self._handle_new_puzzle_click(submenu_item_index)
+                self.menu_open = None
+                self.menu_hover_index = -1
+                self.submenu_open = None
+                self.submenu_hover_index = -1
+                return True
+        # Check if click on FILE menu item
+        elif self.menu_open == 'FILE' and 10 < x < 190 and y >= MENU_HEIGHT:
+            item_index = (y - MENU_HEIGHT) // 30
+            if 0 <= item_index < 4:  # 4 items in FILE menu
+                if item_index == 0:  # "New Puzzle" - open submenu
+                    self.submenu_open = 'NEW_PUZZLE'
+                else:
+                    self._handle_file_menu_click(item_index)
+                    self.menu_open = None
+                    self.submenu_open = None
+                self.menu_hover_index = -1
+                self.submenu_hover_index = -1
+                return True
+        # Check if click on EDIT menu item
+        elif self.menu_open == 'EDIT' and 65 < x < 215 and y >= MENU_HEIGHT:
+            item_index = (y - MENU_HEIGHT) // 30
+            if 0 <= item_index < 1:  # 1 item in EDIT menu
+                self._handle_edit_menu_click(item_index)
+                self.menu_open = None
+                self.submenu_open = None
+                self.menu_hover_index = -1
+                self.submenu_hover_index = -1
+                return True
+
+        # Click outside menu
+        if self.menu_open:
+            self.menu_open = None
+            self.menu_hover_index = -1
+            self.submenu_open = None
+            self.submenu_hover_index = -1
+            return True
+
+        return False
+
+    def _handle_new_puzzle_click(self, difficulty_index):
+        """Handle New Puzzle submenu click (Easy=0, Medium=1, Hard=2)"""
+        difficulties = ['easy', 'medium', 'hard']
+        if 0 <= difficulty_index < 3:
+            self._generate_new_puzzle(difficulties[difficulty_index])
+
+    def _handle_file_menu_click(self, item_index):
+        """Handle File menu item click"""
+        if item_index == 1:  # Load Puzzle
+            self._load_puzzle_dialog()
+        elif item_index == 2:  # Save Puzzle
+            self._save_puzzle_dialog()
+        elif item_index == 3:  # Exit
+            return False  # Will trigger quit in main loop
+
+    def _handle_edit_menu_click(self, item_index):
+        """Handle Edit menu item click"""
+        if item_index == 0:  # Clear Grid
+            self.clear_grid()
+            self.menu_open = None
+
+    def _load_puzzle_dialog(self):
+        """Simple load puzzle dialog"""
+        try:
+            # Try to load from default puzzles folder
+            puzzle_dir = Path('sudoku_puzzles')
+            puzzle_files = list(puzzle_dir.glob('*.json'))
+
+            if not puzzle_files:
+                self.message = "No puzzle files found in sudoku_puzzles/"
+                self.message_color = RED
+                return
+
+            # Load the most recent file
+            latest_file = max(puzzle_files, key=lambda p: p.stat().st_mtime)
+            puzzle, solution, difficulty, clues = load_puzzle(str(latest_file))
+
+            if puzzle is None:
+                self.message = "Error loading puzzle file"
+                self.message_color = RED
+                return
+
+            self.grid = puzzle
+            self.show_final_panel = False
+            self.solving = False
+            self.message = f"Puzzle loaded: {difficulty} ({clues} clues)"
+            self.message_color = GREEN
+        except Exception as e:
+            self.message = f"Error: {str(e)}"
+            self.message_color = RED
+
+    def _save_puzzle_dialog(self):
+        """Simple save puzzle dialog"""
+        try:
+            puzzle_dir = Path('sudoku_puzzles')
+            puzzle_dir.mkdir(exist_ok=True)
+
+            # Generate filename with timestamp
+            import datetime
+            filename = puzzle_dir / f"puzzle_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+            # Determine difficulty from clue count
+            clues = sum(1 for row in self.grid for cell in row if cell != 0)
+            if clues <= 20:
+                difficulty = 'easy'
+            elif clues <= 35:
+                difficulty = 'medium'
+            else:
+                difficulty = 'hard'
+
+            # For now, puzzle is solution (user hasn't solved yet)
+            solution = [row[:] for row in self.grid]
+
+            save_puzzle(self.grid, solution, difficulty, str(filename))
+            self.message = f"Puzzle saved: {filename.name}"
+            self.message_color = GREEN
+        except Exception as e:
+            self.message = f"Error saving: {str(e)}"
+            self.message_color = RED
+
+    def _generate_new_puzzle(self, difficulty):
+        """Generate a new puzzle of given difficulty"""
+        self.message = f"Generating {difficulty} puzzle..."
+        self.message_color = BLUE
+        pygame.display.flip()  # Show message immediately
+
+        puzzle, solution = generate_puzzle(difficulty)
+        self.grid = puzzle
+        self.solution = solution
+        self.error_cells = set()
+        self.selected_cell = (0, 0)
+        self.solving = False
+        self.show_final_panel = False
+
+        clue_count = sum(1 for row in puzzle for cell in row if cell != 0)
+        self.message = f"New {difficulty} puzzle generated! ({clue_count} clues)"
+        self.message_color = GREEN
+        self.waiting_for_difficulty = False
+
     def draw_grid(self):
         """Draw the Sudoku grid with enhanced visuals and animations"""
         # Draw background
-        pygame.draw.rect(self.screen, (248, 248, 248), (MARGIN, MARGIN, GRID_SIZE, GRID_SIZE))
+        pygame.draw.rect(self.screen, (248, 248, 248), (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
 
         # Draw cells
         for i in range(9):
             for j in range(9):
                 x = MARGIN + j * CELL_SIZE
-                y = MARGIN + i * CELL_SIZE
+                y = GRID_TOP + i * CELL_SIZE
 
                 # Determine base color
                 if self.solving and self.current_cell == (i, j):
@@ -182,13 +610,13 @@ class SudokuGame:
             line_color = box_color if i % 3 == 0 else (64, 64, 64)
             # Horizontal lines
             pygame.draw.line(self.screen, line_color,
-                           (MARGIN, MARGIN + i * CELL_SIZE),
-                           (MARGIN + GRID_SIZE, MARGIN + i * CELL_SIZE),
+                           (MARGIN, GRID_TOP + i * CELL_SIZE),
+                           (MARGIN + GRID_SIZE, GRID_TOP + i * CELL_SIZE),
                            thickness)
             # Vertical lines
             pygame.draw.line(self.screen, line_color,
-                           (MARGIN + i * CELL_SIZE, MARGIN),
-                           (MARGIN + i * CELL_SIZE, MARGIN + GRID_SIZE),
+                           (MARGIN + i * CELL_SIZE, GRID_TOP),
+                           (MARGIN + i * CELL_SIZE, GRID_TOP + GRID_SIZE),
                            thickness)
     
     def draw_buttons(self):
@@ -243,7 +671,7 @@ class SudokuGame:
             return
 
         panel_x = MARGIN + GRID_SIZE + PANEL_GAP
-        panel_y = MARGIN
+        panel_y = GRID_TOP
         padding = 10
         bar_height = 16
         bar_width = PANEL_WIDTH - 2 * padding
@@ -350,15 +778,19 @@ class SudokuGame:
     def handle_click(self, pos):
         """Handle mouse click events"""
         x, y = pos
-        
+
+        # Check menu bar first
+        if self.handle_menu_click(pos):
+            return
+
         # Check if click is on grid
-        if MARGIN <= x <= MARGIN + GRID_SIZE and MARGIN <= y <= MARGIN + GRID_SIZE:
+        if MARGIN <= x <= MARGIN + GRID_SIZE and GRID_TOP <= y <= GRID_TOP + GRID_SIZE:
             col = (x - MARGIN) // CELL_SIZE
-            row = (y - MARGIN) // CELL_SIZE
+            row = (y - GRID_TOP) // CELL_SIZE
             self.selected_cell = (row, col)
             self.message = ""
             return
-        
+
         # Check button clicks
         if self.finalize_button.collidepoint(pos):
             self.finalize_puzzle()
@@ -371,6 +803,19 @@ class SudokuGame:
     
     def handle_key(self, key, mod=0):
         """Handle keyboard input"""
+        # --- Handle difficulty selection ---
+        if self.waiting_for_difficulty:
+            if key == pygame.K_e:  # Easy
+                self._generate_new_puzzle('easy')
+            elif key == pygame.K_m:  # Medium
+                self._generate_new_puzzle('medium')
+            elif key == pygame.K_h:  # Hard
+                self._generate_new_puzzle('hard')
+            elif key == pygame.K_ESCAPE:
+                self.waiting_for_difficulty = False
+                self.message = ""
+            return
+
         # --- Solver controls ---
         if key == pygame.K_SPACE and self.solving:
             self.solve_paused = not self.solve_paused
@@ -519,7 +964,7 @@ class SudokuGame:
     def clear_grid(self):
         """Clear the entire grid"""
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
-        self.selected_cell = None
+        self.selected_cell = (0, 0)  # Auto-select top-left
         self.error_cells.clear()
         self.message = "Grid cleared!"
         self.message_color = BLUE
@@ -702,11 +1147,13 @@ class SudokuGame:
 
             # Draw everything
             self.screen.fill((250, 250, 250))  # Light gray background
+            self.draw_menu_bar()  # Draw menu bar background
             self.draw_grid()
             self.draw_buttons()
             self.draw_message()
             if self.solving or self.show_final_panel:
                 self.draw_solver_panel()
+            self.draw_menu_dropdowns()  # Draw menu dropdowns LAST (on top)
 
             pygame.display.flip()
             self.clock.tick(60)
