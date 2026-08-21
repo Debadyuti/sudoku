@@ -467,6 +467,10 @@ class SudokuGame:
                 next(gen)
         except StopIteration as e:
             result = e.value
+            # Freeze timer at final elapsed time BEFORE showing final panel
+            if self.solver_start_time is not None:
+                self.solver_final_time = self.get_solver_elapsed_time()
+
             if result:
                 self.message = f"Puzzle solved! {self.step_count} steps, {self.backtrack_count} backtracks"
                 self.message_color = GREEN
@@ -478,10 +482,6 @@ class SudokuGame:
 
         self.solving = False
         self.error_cells.clear()
-
-        # Freeze timer at final elapsed time (prevent further updates)
-        if self.solver_start_time is not None:
-            self.solver_final_time = self.get_solver_elapsed_time()
 
     def _solve_with_steps(self):
         """Generator that yields after each solve step for animation"""
@@ -541,6 +541,10 @@ class SudokuGame:
                 self.last_backtrack_count = self.backtrack_count
         except StopIteration as e:
             result = e.value
+            # Freeze timer at final elapsed time BEFORE showing final panel
+            if self.solver_start_time is not None:
+                self.solver_final_time = self.get_solver_elapsed_time()
+
             if result:
                 self.message = f"Puzzle solved! {self.step_count} steps, {self.backtrack_count} backtracks"
                 self.message_color = GREEN
