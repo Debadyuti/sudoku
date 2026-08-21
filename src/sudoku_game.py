@@ -61,6 +61,7 @@ class SudokuGame:
         self.puzzle_difficulty = "medium"  # Track difficulty: easy/medium/hard
         self.message = "Ready to play - Enter numbers in selected cell"
         self.message_color = BLUE
+        self.last_message = ""  # Track previous message for change detection
 
         # Button positions
         self.finalize_button = pygame.Rect(BUTTON_X1, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT)
@@ -100,6 +101,7 @@ class SudokuGame:
         self.panel_stat_update_time = 0  # Tracks panel animation timing
         self.message_animation_start = 0  # Tracks message slide-in timing
         self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
+        self.delta_time = 0.016  # Frame time in seconds (16ms = 60 FPS)
 
     def _process_menu_action(self, action):
         """Process menu action returned by MenuSystem.handle_click()"""
@@ -587,19 +589,25 @@ class SudokuGame:
                 if self.solving:
                     self.solve_step_by_step()
 
+                # Track message changes for animation
+                if self.message != self.last_message:
+                    self.message_animation_start = current_time
+                    self.last_message = self.message
+
                 # Draw everything
                 self.screen.fill((250, 250, 250))
                 self.ui.draw_menu_bar()
                 self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells,
                                 self.solving, self.frozen_cells)
                 self.ui.draw_buttons(self.mouse_pos)
-                self.ui.draw_message(self.message, self.message_color)
+                self.ui.draw_message(self.message, self.message_color, self.message_animation_start)
                 if self.solving or self.show_final_panel:
                     elapsed_ms = self.get_solver_elapsed_time()
                     elapsed_str = self.format_solver_time(elapsed_ms)
                     self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
                                             self.candidates, self.solving, self.solve_paused,
-                                            self.show_final_panel, self.solve_fast, elapsed_str)
+                                            self.show_final_panel, self.solve_fast, elapsed_str,
+                                            self.step_pulse_time, self.backtrack_pulse_time)
 
                 # Update and draw menu dropdowns
                 self.menu.update_hover(self.mouse_pos)

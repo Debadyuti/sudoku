@@ -128,7 +128,7 @@ class UIRenderer:
                            thickness)
 
     def draw_buttons(self, mouse_pos):
-        """Draw control buttons in 2x2 grid with hover transitions and keyboard hints.
+        """Draw control buttons in 2x2 grid with smooth hover transitions.
 
         Args:
             mouse_pos: (x, y) current mouse position
@@ -139,16 +139,33 @@ class UIRenderer:
             (pygame.Rect(BUTTON_X1, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Algo", "A", BLUE, (100, 160, 255)),
             (pygame.Rect(BUTTON_X2, BUTTON_Y2, BUTTON_WIDTH, BUTTON_HEIGHT), "Solve Fast", "S", CYAN, (100, 220, 255)),
         ]
+        now = pygame.time.get_ticks()
 
         for btn, label, shortcut, btn_color, hover_color in btn_configs:
-            # Check if button is hovered
+            btn_key = label.replace(" ", "_").lower()
             is_hovered = btn.collidepoint(mouse_pos)
 
-            # Smooth color interpolation on hover
-            color = hover_color if is_hovered else btn_color
+            # Track hover timing for smooth 100ms transition
+            if is_hovered:
+                if btn_key not in self.button_hover_times:
+                    self.button_hover_times[btn_key] = now
+            else:
+                self.button_hover_times.pop(btn_key, None)
 
-            # Draw button shadow (3D effect, larger on hover)
-            shadow_offset = 5 if is_hovered else 3
+            # Calculate smooth color transition (100ms duration)
+            hover_progress = 0.0
+            if btn_key in self.button_hover_times:
+                elapsed = now - self.button_hover_times[btn_key]
+                hover_progress = min(1.0, elapsed / 100.0)
+                hover_progress = ease_in_out(hover_progress)
+
+            # Interpolate color smoothly
+            color = tuple(int(btn_color[i] + (hover_color[i] - btn_color[i]) * hover_progress) for i in range(3))
+
+            # Draw button shadow (smooth scaling, larger on hover)
+            base_shadow = 3
+            max_shadow = 6
+            shadow_offset = base_shadow + (max_shadow - base_shadow) * hover_progress
             shadow_color = (60, 60, 60)
             pygame.draw.rect(self.screen, shadow_color,
                            (btn.x + shadow_offset, btn.y + shadow_offset, btn.width, btn.height))
@@ -157,9 +174,11 @@ class UIRenderer:
             pygame.draw.rect(self.screen, color, btn)
             pygame.draw.rect(self.screen, BLACK, btn, 2)
 
-            # Draw label (slightly larger on hover)
-            font_size = 20 if is_hovered else 19
-            text = pygame.font.Font(None, font_size).render(label, True, WHITE)
+            # Draw label with smooth font size transition
+            base_font_size = 19
+            max_font_size = 20
+            font_size = base_font_size + (max_font_size - base_font_size) * hover_progress
+            text = pygame.font.Font(None, int(font_size)).render(label, True, WHITE)
             text_rect = text.get_rect(center=(btn.centerx, btn.centery - 8))
             self.screen.blit(text, text_rect)
 
@@ -168,36 +187,67 @@ class UIRenderer:
             hint_rect = hint_text.get_rect(center=(btn.centerx, btn.centery + 12))
             self.screen.blit(hint_text, hint_rect)
 
-    def draw_message(self, message, message_color):
-        """Draw status message with toast-style background and subtle animation.
+    def draw_message(self, message, message_color, message_animation_start=0):
+        """Draw status message with toast-style background and slide-in animation.
 
         Args:
             message: Text message to display
             message_color: RGB tuple for text color
+            message_animation_start: Time when message started animating
         """
         if message:
+            now = pygame.time.get_ticks()
             text = FONT_SMALL.render(message, True, message_color)
+
+            # Calculate slide-in animation (200ms duration)
+            if message_animation_start > 0:
+                elapsed = now - message_animation_start
+                if elapsed < 200:
+                    # Slide in from left over 200ms
+                    progress = ease_in_out(elapsed / 200.0)
+                    x_offset = lerp(-150, 0, progress)  # Slide from -150px to 0
+                    opacity_factor = progress
+                else:
+                    x_offset = 0
+                    opacity_factor = 1.0
+            else:
+                x_offset = 0
+                opacity_factor = 1.0
+
             # Draw background box with better styling
             padding = 10
-            bg_rect = text.get_rect(topleft=(MARGIN, MESSAGE_Y))
-            bg_rect.inflate_ip(2 * padding, 2 * padding)
+            bg_x = MARGIN + x_offset
+            bg_rect = pygame.Rect(bg_x, MESSAGE_Y, text.get_width() + 2 * padding, text.get_height() + 2 * padding)
 
-            # Subtle shadow
+            # Apply opacity via surface
+            bg_color = (248, 248, 250)
+            if opacity_factor < 1.0:
+                # Fade background
+                faded_bg = tuple(int(c + (255 - c) * (1 - opacity_factor)) for c in bg_color)
+            else:
+                faded_bg = bg_color
+
+            # Subtle shadow (fades with opacity)
             shadow_rect = bg_rect.copy()
             shadow_rect.x += 2
             shadow_rect.y += 2
-            pygame.draw.rect(self.screen, (200, 200, 200), shadow_rect)
+            shadow_color = tuple(int(c * opacity_factor + 200 * (1 - opacity_factor)) for c in (60, 60, 60))
+            pygame.draw.rect(self.screen, shadow_color, shadow_rect)
 
             # Main background
-            pygame.draw.rect(self.screen, (248, 248, 250), bg_rect)
-            pygame.draw.rect(self.screen, (180, 180, 200), bg_rect, 2)
+            pygame.draw.rect(self.screen, faded_bg, bg_rect)
+            border_color = tuple(int(c * opacity_factor + 220 * (1 - opacity_factor)) for c in (180, 180, 200))
+            pygame.draw.rect(self.screen, border_color, bg_rect, 2)
 
-            # Draw text
-            self.screen.blit(text, (MARGIN + padding, MESSAGE_Y + padding))
+            # Draw text with fading
+            text_color = tuple(int(c * opacity_factor + 255 * (1 - opacity_factor)) for c in message_color)
+            faded_text = FONT_SMALL.render(message, True, text_color)
+            self.screen.blit(faded_text, (bg_x + padding, MESSAGE_Y + padding))
 
     def draw_solver_panel(self, backtrack_count, step_count, current_cell, candidates,
-                         solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s"):
-        """Draw algorithm visualization panel with metrics.
+                         solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s",
+                         step_pulse_time=0, backtrack_pulse_time=0):
+        """Draw algorithm visualization panel with metrics and animations.
 
         Args:
             backtrack_count: Number of backtracks
@@ -209,6 +259,8 @@ class UIRenderer:
             show_final_panel: True if showing final results
             solve_fast: True if fast solve mode used
             elapsed_time: Formatted elapsed time string (e.g. "1m 23s")
+            step_pulse_time: Time when step counter last updated
+            backtrack_pulse_time: Time when backtrack counter last updated
         """
         if not solving and not show_final_panel:
             return
@@ -244,34 +296,58 @@ class UIRenderer:
             self.screen.blit(cell_text, (panel_x + padding + 10, y_offset))
             y_offset += 40
 
-        # Backtracks metric (now first, reversed order)
+        # Backtracks metric (with pulse on update)
         back_label = pygame.font.Font(None, 20).render("Backtracks:", True, (66, 66, 66))
         self.screen.blit(back_label, (panel_x + padding, y_offset))
-        back_value = pygame.font.Font(None, 24).render(str(backtrack_count), True, ORANGE)
-        back_rect = back_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
+
+        # Apply pulse scale to backtrack value
+        back_scale = self.get_pulse_scale(backtrack_pulse_time, duration=150)
+        back_font_size = int(24 * back_scale)
+        back_value = pygame.font.Font(None, back_font_size).render(str(backtrack_count), True, ORANGE)
+        back_rect = back_value.get_rect(topleft=(panel_x + padding + 115, y_offset + int(3 * (1 - back_scale))))
         self.screen.blit(back_value, back_rect)
         y_offset += 28
 
-        # Backtracks progress bar
+        # Backtracks progress bar with glow
         max_backtracks = 50
         backtrack_pct = min(1.0, backtrack_count / max_backtracks)
         draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
                          backtrack_pct, ORANGE, (255, 230, 200))
+
+        # Add glow effect on bar during pulse
+        glow = self.get_bar_glow(backtrack_pulse_time, duration=100)
+        if glow > 0:
+            glow_color = tuple(int(c * glow + 255 * (1 - glow)) for c in ORANGE)
+            glow_width = int(bar_width * backtrack_pct)
+            pygame.draw.rect(self.screen, glow_color, (panel_x + padding, y_offset, glow_width, bar_height), 2)
+
         y_offset += 32
 
-        # Steps metric (now second, reversed order)
+        # Steps metric (with pulse on update)
         steps_label = pygame.font.Font(None, 20).render("Steps:", True, (66, 66, 66))
         self.screen.blit(steps_label, (panel_x + padding, y_offset))
-        steps_value = pygame.font.Font(None, 24).render(str(step_count), True, GREEN)
-        steps_rect = steps_value.get_rect(topleft=(panel_x + padding + 115, y_offset))
+
+        # Apply pulse scale to steps value
+        step_scale = self.get_pulse_scale(step_pulse_time, duration=150)
+        step_font_size = int(24 * step_scale)
+        steps_value = pygame.font.Font(None, step_font_size).render(str(step_count), True, GREEN)
+        steps_rect = steps_value.get_rect(topleft=(panel_x + padding + 115, y_offset + int(3 * (1 - step_scale))))
         self.screen.blit(steps_value, steps_rect)
         y_offset += 28
 
-        # Steps progress bar
+        # Steps progress bar with glow
         max_steps = 200
         steps_pct = min(1.0, step_count / max_steps)
         draw_progress_bar(self.screen, panel_x + padding, y_offset, bar_width, bar_height,
                          steps_pct, GREEN, (220, 240, 220))
+
+        # Add glow effect on bar during pulse
+        glow = self.get_bar_glow(step_pulse_time, duration=100)
+        if glow > 0:
+            glow_color = tuple(int(c * glow + 255 * (1 - glow)) for c in GREEN)
+            glow_width = int(bar_width * steps_pct)
+            pygame.draw.rect(self.screen, glow_color, (panel_x + padding, y_offset, glow_width, bar_height), 2)
+
         y_offset += 38
 
         # Candidates section (scrollable content area)
