@@ -23,6 +23,13 @@ class PuzzleState(Enum):
     SINGLE_SOLUTION = "SINGLE_SOLUTION"          # GREEN - Exactly one solution
 
 
+class SolveAlgorithm(Enum):
+    """Algorithm selection for solving (Phase 8)"""
+    BACKTRACK = "backtrack"
+    CONSTRAINT_PROPAGATION = "constraint_prop"
+    HYBRID = "hybrid"
+
+
 def generate_complete_grid():
     """Generate a complete, valid 9x9 Sudoku grid (all cells filled).
 

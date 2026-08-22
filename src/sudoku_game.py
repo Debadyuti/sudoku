@@ -20,7 +20,7 @@ try:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
-    from .solver import SudokuSolver, PuzzleState, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
+    from .solver import SudokuSolver, PuzzleState, SolveAlgorithm, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from .ui import UIRenderer
     from .menu import MenuSystem
 except ImportError:
@@ -38,7 +38,7 @@ except ImportError:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
-    from solver import SudokuSolver, PuzzleState, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
+    from solver import SudokuSolver, PuzzleState, SolveAlgorithm, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from ui import UIRenderer
     from menu import MenuSystem
 
@@ -131,6 +131,16 @@ class SudokuGame:
         self.generation_result = None  # (puzzle, solution, msg, color) when done
         self.generation_start_time = None  # For elapsed time display
 
+        # Phase 8.1: Algorithm Infrastructure
+        self.algorithm_selected = SolveAlgorithm.HYBRID  # Default algorithm
+        self.algorithm_stats = {
+            'name': 'Hybrid',
+            'iterations': 0,
+            'backtracks': 0,
+            'constraints_applied': 0,
+            'time_ms': 0
+        }
+
     def _start_puzzle_generation(self, difficulty):
         """Start puzzle generation in background thread."""
         self.generating_puzzle = True
@@ -219,6 +229,18 @@ class SudokuGame:
         elif action_type == 'edit_menu':
             if item_index == 0:  # Clear Grid
                 self.clear_grid()
+            elif item_index == 1:  # Phase 8.1: Algorithm - Backtrack
+                self.algorithm_selected = SolveAlgorithm.BACKTRACK
+                self.message = "Algorithm: Backtracking"
+                self.message_color = BLUE
+            elif item_index == 2:  # Phase 8.1: Algorithm - Constraint Propagation
+                self.algorithm_selected = SolveAlgorithm.CONSTRAINT_PROPAGATION
+                self.message = "Algorithm: Constraint Propagation"
+                self.message_color = BLUE
+            elif item_index == 3:  # Phase 8.1: Algorithm - Hybrid
+                self.algorithm_selected = SolveAlgorithm.HYBRID
+                self.message = "Algorithm: Hybrid"
+                self.message_color = BLUE
             self.menu.close_menu()
 
     def handle_click(self, pos):
@@ -484,7 +506,15 @@ class SudokuGame:
         self.state_color = (255, 165, 0)
         self.finalized = False
         self.state_solution_grid = None
-    
+
+    def update_algorithm_stats(self):
+        """Update algorithm statistics after solving"""
+        algo_name = self.algorithm_selected.value.replace('_', ' ').title()
+        self.algorithm_stats['name'] = algo_name
+        self.algorithm_stats['iterations'] = self.step_count
+        self.algorithm_stats['backtracks'] = self.backtrack_count
+        self.algorithm_stats['time_ms'] = self.solver_final_time or 0
+
     def solve_puzzle(self, animated=True):
         """Start solving: animated step-by-step or fast"""
         # Check if puzzle is already complete
@@ -516,6 +546,16 @@ class SudokuGame:
         self.solver_pause_time = None
         self.solver_total_pause = 0
         self.solver_final_time = None  # Reset frozen time for new solve
+
+        # Phase 8.1: Route to selected algorithm
+        # For Phase 8.1, all algorithms use backtracking
+        # (Phase 8.2/8.3 will implement constraint propagation and hybrid)
+        if self.algorithm_selected == SolveAlgorithm.BACKTRACK:
+            pass  # Use default backtracking path below
+        elif self.algorithm_selected == SolveAlgorithm.CONSTRAINT_PROPAGATION:
+            pass  # TODO: Phase 8.2 - implement constraint propagation
+        elif self.algorithm_selected == SolveAlgorithm.HYBRID:
+            pass  # TODO: Phase 8.3 - implement hybrid logic
 
         if animated:
             self.solver_gen = self._solve_with_steps()
@@ -681,6 +721,8 @@ class SudokuGame:
 
         self.solving = False
         self.error_cells.clear()
+        # Phase 8.1: Update algorithm statistics
+        self.update_algorithm_stats()
 
     def _solve_with_steps(self):
         """Generator that yields after each solve step for animation"""
@@ -828,11 +870,12 @@ class SudokuGame:
                     elapsed_ms = self.get_solver_elapsed_time()
                     elapsed_str = self.format_solver_time(elapsed_ms)
                     extended_stats = self._get_extended_stats() if self.show_final_panel else None
+                    algo_name = self.algorithm_selected.value.replace('_', ' ').title()
                     self.ui.draw_solver_panel(self.backtrack_count, self.step_count, self.current_cell,
                                             self.candidates, self.solving, self.solve_paused,
                                             self.show_final_panel, self.solve_fast, elapsed_str,
                                             self.step_pulse_time, self.backtrack_pulse_time, self.step_delay,
-                                            extended_stats)
+                                            extended_stats, algo_name)
 
                 # Update and draw menu dropdowns
                 self.menu.update_hover(self.mouse_pos)

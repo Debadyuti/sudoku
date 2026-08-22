@@ -281,7 +281,8 @@ class UIRenderer:
 
     def draw_solver_panel(self, backtrack_count, step_count, current_cell, candidates,
                          solving, solve_paused, show_final_panel, solve_fast, elapsed_time="0s",
-                         step_pulse_time=0, backtrack_pulse_time=0, step_delay=300, extended_stats=None):
+                         step_pulse_time=0, backtrack_pulse_time=0, step_delay=300, extended_stats=None,
+                         algorithm_name="Hybrid"):
         """Draw algorithm visualization panel with metrics and animations.
 
         Args:
@@ -318,7 +319,12 @@ class UIRenderer:
         self.screen.blit(title, (panel_x + padding, panel_y + 10))
         self.screen.blit(subtitle, (panel_x + padding, panel_y + 32))
 
-        y_offset = panel_y + 55
+        # Phase 8.1: Display selected algorithm
+        algo_font = pygame.font.Font(None, 16)
+        algo_text = algo_font.render(f"Mode: {algorithm_name}", True, (33, 150, 243))
+        self.screen.blit(algo_text, (panel_x + padding, panel_y + 50))
+
+        y_offset = panel_y + 70
 
         # Current cell info (1,1-based indexing)
         if current_cell and (solving or show_final_panel):

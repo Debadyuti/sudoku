@@ -89,9 +89,9 @@ class MenuSystem:
                     return ('file_menu', item_index)
 
         # Check if click on EDIT menu item
-        if self.menu_open == 'EDIT' and 65 < x < 215 and y >= MENU_HEIGHT:
+        if self.menu_open == 'EDIT' and 65 < x < 250 and y >= MENU_HEIGHT:
             item_index = (y - MENU_HEIGHT) // 30
-            if 0 <= item_index < 1:
+            if 0 <= item_index < 4:  # Clear Grid + 3 algorithm options
                 return ('edit_menu', item_index)
 
         return False
