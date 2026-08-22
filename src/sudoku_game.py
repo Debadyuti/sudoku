@@ -763,8 +763,8 @@ class SudokuGame:
                 self.screen.fill((250, 250, 250))
                 self.ui.draw_menu_bar()
                 self.ui.draw_grid(self.grid, self.selected_cell, self.current_cell, self.error_cells,
-                                self.solving, self.frozen_cells)
-                self.ui.draw_buttons(self.mouse_pos)
+                                self.solving, self.frozen_cells, self.puzzle_state, self.state_color)
+                self.ui.draw_buttons(self.mouse_pos, self.puzzle_state, self.finalized)
                 self.ui.draw_message(self.message, self.message_color, self.message_animation_start)
                 if self.solving or self.show_final_panel:
                     elapsed_ms = self.get_solver_elapsed_time()

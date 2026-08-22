@@ -55,8 +55,8 @@ class UIRenderer:
         self.button_rects = {}  # Cache button rectangles
         self.button_hover_times = {}  # Track button hover start times for smooth transitions
 
-    def draw_grid(self, grid, selected_cell, solving_cell, error_cells, solving_mode=False, frozen_cells=None):
-        """Draw the Sudoku grid with enhanced visuals and animations.
+    def draw_grid(self, grid, selected_cell, solving_cell, error_cells, solving_mode=False, frozen_cells=None, puzzle_state=None, state_color=None):
+        """Draw the Sudoku grid with enhanced visuals, animations, and state colors.
 
         Args:
             grid: 9x9 grid data
@@ -65,12 +65,23 @@ class UIRenderer:
             error_cells: Set of (row, col) with conflicts
             solving_mode: True if solver is actively running
             frozen_cells: Set of (row, col) with immutable initial cells
+            puzzle_state: PuzzleState enum (for Phase 7.3 UI coloring)
+            state_color: RGB tuple for state coloring (for Phase 7.3 UI)
         """
         if frozen_cells is None:
             frozen_cells = set()
 
-        # Draw background with subtle gradient effect
-        pygame.draw.rect(self.screen, (250, 250, 250), (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
+        # Draw background with state color (Phase 7.3)
+        # Use state_color if available, otherwise default light gray
+        bg_color = state_color if state_color else (250, 250, 250)
+
+        # Create a more subtle state indicator by mixing state color with white
+        # This makes the grid background slightly tinted with the state color
+        if state_color:
+            # 90% white, 10% state color = subtle tint
+            bg_color = tuple(int(250 * 0.9 + c * 0.1) for c in state_color)
+
+        pygame.draw.rect(self.screen, bg_color, (MARGIN, GRID_TOP, GRID_SIZE, GRID_SIZE))
 
         # Draw cells
         for i in range(9):
@@ -100,9 +111,13 @@ class UIRenderer:
                     pygame.draw.line(self.screen, shadow_color, (x + CELL_SIZE - 1, y + 1), (x + CELL_SIZE - 1, y + CELL_SIZE - 1), 1)
                     pygame.draw.line(self.screen, shadow_color, (x + 1, y + CELL_SIZE - 1), (x + CELL_SIZE - 1, y + CELL_SIZE - 1), 1)
 
-                # Draw cell border
-                border_color = (100, 100, 100) if selected_cell == (i, j) else (180, 180, 180)
-                border_width = 2 if selected_cell == (i, j) else 1
+                # Draw cell border (Phase 7.3: frozen cells have blue border)
+                if (i, j) in frozen_cells:
+                    border_color = (33, 150, 243) if selected_cell == (i, j) else (100, 180, 255)  # Blue for frozen
+                    border_width = 2 if selected_cell == (i, j) else 2  # Always thicker for frozen
+                else:
+                    border_color = (100, 100, 100) if selected_cell == (i, j) else (180, 180, 180)
+                    border_width = 2 if selected_cell == (i, j) else 1
                 pygame.draw.rect(self.screen, border_color, (x, y, CELL_SIZE, CELL_SIZE), border_width)
 
                 # Draw number if present
@@ -128,11 +143,13 @@ class UIRenderer:
                            (MARGIN + i * CELL_SIZE, GRID_TOP + GRID_SIZE),
                            thickness)
 
-    def draw_buttons(self, mouse_pos):
-        """Draw control buttons in 2x2 grid with smooth hover transitions.
+    def draw_buttons(self, mouse_pos, puzzle_state=None, finalized=False):
+        """Draw control buttons in 2x2 grid with smooth hover transitions and state-aware styling.
 
         Args:
             mouse_pos: (x, y) current mouse position
+            puzzle_state: PuzzleState enum (for Phase 7.3 button state)
+            finalized: Boolean whether puzzle is finalized
         """
         btn_configs = [
             (pygame.Rect(BUTTON_X1, BUTTON_Y, BUTTON_WIDTH, BUTTON_HEIGHT), "Finalize", "F", GREEN, (100, 200, 100)),
@@ -144,7 +161,11 @@ class UIRenderer:
 
         for btn, label, shortcut, btn_color, hover_color in btn_configs:
             btn_key = label.replace(" ", "_").lower()
-            is_hovered = btn.collidepoint(mouse_pos)
+
+            # Disable Finalize button if already finalized (Phase 7.3)
+            is_disabled = (label == "Finalize" and finalized)
+
+            is_hovered = btn.collidepoint(mouse_pos) and not is_disabled
 
             # Track hover timing for smooth 100ms transition
             if is_hovered:
@@ -160,20 +181,24 @@ class UIRenderer:
                 hover_progress = min(1.0, elapsed / 100.0)
                 hover_progress = ease_in_out(hover_progress)
 
-            # Interpolate color smoothly
-            color = tuple(int(btn_color[i] + (hover_color[i] - btn_color[i]) * hover_progress) for i in range(3))
+            # Interpolate color smoothly (or use gray if disabled)
+            if is_disabled:
+                color = (180, 180, 180)  # Gray out disabled button
+            else:
+                color = tuple(int(btn_color[i] + (hover_color[i] - btn_color[i]) * hover_progress) for i in range(3))
 
-            # Draw button shadow (smooth scaling, larger on hover)
-            base_shadow = 3
-            max_shadow = 6
-            shadow_offset = base_shadow + (max_shadow - base_shadow) * hover_progress
-            shadow_color = (60, 60, 60)
-            pygame.draw.rect(self.screen, shadow_color,
-                           (btn.x + shadow_offset, btn.y + shadow_offset, btn.width, btn.height))
+            # Draw button shadow (smooth scaling, larger on hover, no shadow if disabled)
+            if not is_disabled:
+                base_shadow = 3
+                max_shadow = 6
+                shadow_offset = base_shadow + (max_shadow - base_shadow) * hover_progress
+                shadow_color = (60, 60, 60)
+                pygame.draw.rect(self.screen, shadow_color,
+                               (btn.x + shadow_offset, btn.y + shadow_offset, btn.width, btn.height))
 
             # Draw button
             pygame.draw.rect(self.screen, color, btn)
-            pygame.draw.rect(self.screen, BLACK, btn, 2)
+            pygame.draw.rect(self.screen, BLACK if not is_disabled else (120, 120, 120), btn, 2)
 
             # Draw label with smooth font size transition
             base_font_size = 19
