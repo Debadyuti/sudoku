@@ -2,6 +2,8 @@ import pygame
 import sys
 import signal
 from collections import deque
+import threading
+import time
 
 # Import all constants from constants module
 try:
@@ -121,6 +123,51 @@ class SudokuGame:
         self.finalized = False  # Whether puzzle has been finalized
         self.state_solution_grid = None  # Solution found during validation
 
+        # Puzzle generation threading
+        self.generating_puzzle = False  # Generation in progress
+        self.generation_thread = None  # Background thread
+        self.generation_result = None  # (puzzle, solution, msg, color) when done
+        self.generation_start_time = None  # For elapsed time display
+
+    def _start_puzzle_generation(self, difficulty):
+        """Start puzzle generation in background thread."""
+        self.generating_puzzle = True
+        self.generation_start_time = time.time()
+        self.generation_result = None
+
+        def generate_in_thread():
+            """Run puzzle generation in background."""
+            try:
+                puzzle, solution, msg, color = MenuSystem.generate_puzzle(difficulty)
+                self.generation_result = (puzzle, solution, msg, color)
+            except Exception as e:
+                self.generation_result = (None, None, f"Error: {str(e)}", RED)
+
+        self.generation_thread = threading.Thread(target=generate_in_thread, daemon=True)
+        self.generation_thread.start()
+
+    def _finish_puzzle_generation(self):
+        """Check if generation complete and apply result."""
+        if not self.generating_puzzle or not self.generation_result:
+            return
+
+        puzzle, solution, msg, color = self.generation_result
+        self.generating_puzzle = False
+
+        if puzzle:
+            self.grid = puzzle
+            self.solution = solution
+            self.puzzle_difficulty = "medium"  # Default, actual comes from generation
+            self.error_cells.clear()
+            self.selected_cell = (0, 0)
+            self.frozen_cells.clear()
+            self.finalized = False
+            self.puzzle_state = PuzzleState.MULTIPLE_SOLUTIONS
+            self.state_color = (255, 165, 0)
+
+        self.message = msg
+        self.message_color = color
+
     def _process_menu_action(self, action):
         """Process menu action returned by MenuSystem.handle_click()"""
         if action is True:  # Menu item clicked, menu state updated by MenuSystem
@@ -134,24 +181,13 @@ class SudokuGame:
         difficulties = ['easy', 'medium', 'hard']
 
         if action_type == 'new_puzzle':
-            # Generate puzzle for given difficulty
+            # Generate puzzle for given difficulty (in background thread)
             difficulty = difficulties[item_index] if item_index < 3 else 'medium'
-            puzzle, solution, msg, color = MenuSystem.generate_puzzle(difficulty)
-            if puzzle:
-                self.grid = puzzle
-                self.solution = solution
-                self.puzzle_difficulty = difficulty  # Track original difficulty
-                self.error_cells.clear()
-                self.selected_cell = (0, 0)
-                self.solving = False
-                self.show_final_panel = False
-                # Mark all non-empty cells as frozen (initial puzzle state)
-                self.frozen_cells = set((i, j) for i in range(9) for j in range(9) if puzzle[i][j] != 0)
-                self.message = msg
-                self.message_color = color
-            else:
-                self.message = msg
-                self.message_color = color
+            self._start_puzzle_generation(difficulty)
+            self.message = f"Generating {difficulty} puzzle..."
+            self.message_color = BLUE
+            self.solving = False
+            self.show_final_panel = False
             self.menu.close_menu()
 
         elif action_type == 'file_menu':
@@ -749,6 +785,20 @@ class SudokuGame:
                         self.handle_click(event.pos)
                     elif event.type == pygame.KEYDOWN:
                         self.handle_key(event.key, event.mod)
+
+                # Check if puzzle generation completed
+                if self.generating_puzzle:
+                    if self.generation_result:
+                        # Generation finished
+                        self._finish_puzzle_generation()
+                    else:
+                        # Still generating - show spinner with elapsed time
+                        elapsed_seconds = time.time() - self.generation_start_time
+                        spinner_chars = ['|', '/', '-', '\\']
+                        spinner_index = int(elapsed_seconds * 4) % len(spinner_chars)
+                        spinner = spinner_chars[spinner_index]
+                        self.message = f"{spinner} Generating puzzle... ({elapsed_seconds:.1f}s)"
+                        self.message_color = BLUE
 
                 # Update solver animation
                 if self.solving:
