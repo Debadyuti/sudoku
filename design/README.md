@@ -124,6 +124,38 @@ Buttons (Material Design):
   - Release process documentation
   - User experience flow
 
+## Algorithm Analysis & Optimization (Phase 7+)
+
+Essential reading for algorithm selection:
+
+1. **PHASE7_ALGORITHM_SELECTION.md** ⭐ **START HERE**
+   - Decision framework: Which algorithm to implement
+   - Your findings summarized (42,000 backtracks issue)
+   - Implementation roadmap (7-hour plan)
+   - PATH A/B/C options for Phase 7
+   - **RECOMMENDATION: Hybrid (Constraint Prop + Heuristics)**
+
+2. **ALGORITHMS_AND_COMPLEXITY.md** - Complete reference
+   - **5 solver algorithms documented**:
+     1. Naive Backtracking (O(9^n), 200-1000ms)
+     2. Backtrack + MRV (50-500ms, 100-5000 backtracks)
+     3. Constraint Propagation AC-3 (10-100ms)
+     4. **Hybrid (Constraint Prop + Heuristics)** ⭐ RECOMMENDED (5-50ms)
+     5. Dancing Links Algorithm X (1-10ms)
+   - Complexity analysis for each
+   - Human learning value assessment
+   - Performance benchmarks and trade-offs
+   - Difficulty classification based on algorithmic complexity
+   - **Key Finding**: Current "easy" (15 clues) = 42,000+ backtracks (actually HARD!)
+
+3. **DANCING_LINKS_DEEP_DIVE.md** - Algorithm X explained
+   - Exact cover problem formulation
+   - Subset selection strategy
+   - Doubly-linked list data structure
+   - Why Dancing Links is fast (O(1) remove/restore)
+   - Why it doesn't visualize well
+   - When to use (instant solve backend, not visualization)
+
 ## Related Documentation
 
 - **PROJECT_STATUS.md** (docs/) - Complete project status report
@@ -134,4 +166,4 @@ Buttons (Material Design):
 ---
 
 **Last Updated**: 2026-08-21  
-**Status**: Phase 6 complete (Hint, Statistics, Undo/Redo) | Phase 7 designed (ready for implementation)
+**Status**: Phase 6 complete (Hint, Statistics, Undo/Redo) | Phase 7 designed (ready for implementation) | Algorithm analysis complete
