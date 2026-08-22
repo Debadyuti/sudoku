@@ -74,6 +74,8 @@ def generate_puzzle(difficulty='medium'):
         difficulty: 'easy' (15 clues), 'medium' (27 clues), 'hard' (40 clues)
 
     Returns: (puzzle_grid, solution_grid)
+
+    Note: Does NOT guarantee unique solution. Use generate_puzzle_with_uniqueness() for that.
     """
     solution = generate_complete_grid()
     puzzle = [row[:] for row in solution]  # Deep copy
@@ -98,6 +100,66 @@ def generate_puzzle(difficulty='medium'):
             clues_removed += 1
 
     return puzzle, solution
+
+
+def generate_puzzle_with_uniqueness(difficulty='medium', max_attempts=10):
+    """Generate a puzzle with guaranteed single solution (Phase 7.4).
+
+    Removes clues one-by-one and validates uniqueness before removal.
+    Slower than generate_puzzle() but guarantees exactly one solution.
+
+    Args:
+        difficulty: 'easy' (10-25 clues), 'medium' (20-35 clues), 'hard' (30-50 clues)
+        max_attempts: Max attempts to remove each clue (default 10)
+
+    Returns: (puzzle_grid, solution_grid, puzzle_state, state_message, state_color)
+    """
+    solution = generate_complete_grid()
+    puzzle = [row[:] for row in solution]
+
+    # Difficulty mapping: (min_clues, target_clues, max_clues)
+    difficulty_map = {
+        'easy': (10, 20, 25),
+        'medium': (20, 27, 35),
+        'hard': (30, 40, 50)
+    }
+
+    min_clues, target_clues, max_clues = difficulty_map.get(difficulty, (20, 27, 35))
+
+    # Randomly try to remove clues while maintaining unique solution
+    cells = [(i, j) for i in range(9) for j in range(9)]
+    random.shuffle(cells)
+
+    for row, col in cells:
+        # Stop if we've reached minimum clues for this difficulty
+        current_clues = sum(1 for i in range(9) for j in range(9) if puzzle[i][j] != 0)
+        if current_clues <= min_clues:
+            break
+
+        # Skip if already empty
+        if puzzle[row][col] == 0:
+            continue
+
+        # Try to remove this clue
+        value = puzzle[row][col]
+        puzzle[row][col] = 0
+
+        # Check if puzzle still has unique solution
+        solver = SudokuSolver([row[:] for row in puzzle])
+        solution_count = solver.count_solutions(limit=2)
+
+        if solution_count == 1:
+            # Keep the clue removed
+            continue
+        else:
+            # Restore the clue (removing it creates multiple solutions)
+            puzzle[row][col] = value
+
+    # Validate final puzzle
+    solver = SudokuSolver([row[:] for row in puzzle])
+    state, message, color = solver.validate_puzzle()
+
+    return puzzle, solution, state, message, color
 
 
 def save_puzzle(puzzle, solution, difficulty, filepath, frozen_cells=None):

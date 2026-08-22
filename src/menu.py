@@ -11,10 +11,10 @@ from tkinter import filedialog
 
 try:
     from .constants import MENU_HEIGHT, RED, GREEN, BLUE
-    from .solver import generate_puzzle, save_puzzle, load_puzzle
+    from .solver import generate_puzzle_with_uniqueness, save_puzzle, load_puzzle
 except ImportError:
     from constants import MENU_HEIGHT, RED, GREEN, BLUE
-    from solver import generate_puzzle, save_puzzle, load_puzzle
+    from solver import generate_puzzle_with_uniqueness, save_puzzle, load_puzzle
 
 
 class MenuSystem:
@@ -105,7 +105,7 @@ class MenuSystem:
 
     @staticmethod
     def generate_puzzle(difficulty):
-        """Generate a new puzzle of given difficulty.
+        """Generate a new puzzle with guaranteed single solution (Phase 7.4).
 
         Args:
             difficulty: 'easy', 'medium', or 'hard'
@@ -113,9 +113,9 @@ class MenuSystem:
         Returns: (puzzle_grid, solution_grid, message, message_color)
         """
         try:
-            puzzle, solution = generate_puzzle(difficulty)
+            puzzle, solution, state, state_msg, state_color = generate_puzzle_with_uniqueness(difficulty)
             clue_count = sum(1 for row in puzzle for cell in row if cell != 0)
-            message = f"New {difficulty} puzzle generated! ({clue_count} clues)"
+            message = f"New {difficulty} puzzle generated! ({clue_count} clues, single solution)"
             return puzzle, solution, message, GREEN
         except Exception as e:
             return None, None, f"Error generating puzzle: {str(e)}", RED
