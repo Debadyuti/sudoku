@@ -480,3 +480,258 @@ class SudokuSolver:
             return (PuzzleState.MULTIPLE_SOLUTIONS,
                     f"Multiple solutions exist",
                     (255, 165, 0))  # AMBER
+
+    def _build_candidates(self, grid):
+        """Build candidate sets for all empty cells.
+
+        Returns: 9x9 grid where grid[i][j] is:
+          - None if cell is filled (value 1-9)
+          - set of candidates (1-9) if cell is empty
+        """
+        candidates = [[None for _ in range(9)] for _ in range(9)]
+        for i in range(9):
+            for j in range(9):
+                if grid[i][j] == 0:
+                    candidates[i][j] = set(self.get_candidates(i, j))
+        return candidates
+
+    def _get_unit_peers(self, row, col):
+        """Get all peers of cell (row, col) in same row, column, or box.
+
+        Returns: List of (i, j) tuples (excluding the cell itself)
+        """
+        peers = set()
+
+        # Same row
+        for j in range(9):
+            if j != col:
+                peers.add((row, j))
+
+        # Same column
+        for i in range(9):
+            if i != row:
+                peers.add((i, col))
+
+        # Same 3x3 box
+        box_row, box_col = 3 * (row // 3), 3 * (col // 3)
+        for i in range(box_row, box_row + 3):
+            for j in range(box_col, box_col + 3):
+                if (i, j) != (row, col):
+                    peers.add((i, j))
+
+        return list(peers)
+
+    def _apply_constraint_rules(self, grid, candidates, stats):
+        """Apply constraint rules iteratively until convergence.
+
+        Args:
+            grid: Current grid state
+            candidates: 9x9 grid of candidate sets
+            stats: Dict with 'constraints_applied' counter
+
+        Returns: (grid, candidates) after constraint application
+        """
+        changed = True
+        while changed:
+            changed = False
+
+            # Rule 1: Naked Singles (cells with 1 candidate)
+            for i in range(9):
+                for j in range(9):
+                    if grid[i][j] == 0 and candidates[i][j]:
+                        if len(candidates[i][j]) == 1:
+                            num = list(candidates[i][j])[0]
+                            grid[i][j] = num
+                            candidates[i][j] = None
+
+                            # Remove from peers
+                            for pi, pj in self._get_unit_peers(i, j):
+                                if candidates[pi][pj] is not None:
+                                    candidates[pi][pj].discard(num)
+
+                            stats['constraints_applied'] += 1
+                            changed = True
+
+            # Rule 2: Hidden Singles (number appears in 1 cell of unit)
+            # Check rows
+            for i in range(9):
+                for num in range(1, 10):
+                    positions = [j for j in range(9)
+                               if candidates[i][j] and num in candidates[i][j]]
+                    if len(positions) == 1:
+                        j = positions[0]
+                        if len(candidates[i][j]) > 1:
+                            candidates[i][j] = {num}
+                            changed = True
+
+            # Check columns
+            for j in range(9):
+                for num in range(1, 10):
+                    positions = [i for i in range(9)
+                               if candidates[i][j] and num in candidates[i][j]]
+                    if len(positions) == 1:
+                        i = positions[0]
+                        if len(candidates[i][j]) > 1:
+                            candidates[i][j] = {num}
+                            changed = True
+
+            # Check boxes
+            for box_row in range(0, 9, 3):
+                for box_col in range(0, 9, 3):
+                    for num in range(1, 10):
+                        positions = [(i, j) for i in range(box_row, box_row+3)
+                                   for j in range(box_col, box_col+3)
+                                   if candidates[i][j] and num in candidates[i][j]]
+                        if len(positions) == 1:
+                            i, j = positions[0]
+                            if len(candidates[i][j]) > 1:
+                                candidates[i][j] = {num}
+                                changed = True
+
+        return grid, candidates
+
+    def solve_constraint_propagation(self):
+        """Constraint propagation solver with backtracking fallback.
+
+        Returns: True if solved, False if unsolvable
+        """
+        grid = [row[:] for row in self.grid]
+        candidates = self._build_candidates(grid)
+        stats = {'constraints_applied': 0, 'backtracks': 0}
+
+        def solve_recursive():
+            nonlocal grid, candidates
+
+            # Apply constraints
+            grid, candidates = self._apply_constraint_rules(grid, candidates, stats)
+
+            # Check for contradiction (empty candidate set)
+            for i in range(9):
+                for j in range(9):
+                    if grid[i][j] == 0 and candidates[i][j] is not None:
+                        if len(candidates[i][j]) == 0:
+                            return False
+
+            # Check if complete
+            if all(grid[i][j] != 0 for i in range(9) for j in range(9)):
+                return True
+
+            # Pick cell with minimum candidates (MRV heuristic)
+            min_candidates = None
+            min_cell = None
+            for i in range(9):
+                for j in range(9):
+                    if grid[i][j] == 0 and candidates[i][j]:
+                        if min_candidates is None or len(candidates[i][j]) < len(min_candidates):
+                            min_candidates = candidates[i][j]
+                            min_cell = (i, j)
+
+            if not min_cell:
+                return False
+
+            # Try each candidate
+            i, j = min_cell
+            for num in sorted(min_candidates):
+                # Backup state
+                grid_backup = [row[:] for row in grid]
+                candidates_backup = [[cell.copy() if cell else None for cell in row]
+                                    for row in candidates]
+
+                # Try this value
+                grid[i][j] = num
+                candidates[i][j] = None
+
+                # Remove from peers
+                for pi, pj in self._get_unit_peers(i, j):
+                    if candidates[pi][pj]:
+                        candidates[pi][pj].discard(num)
+
+                # Recurse
+                if solve_recursive():
+                    return True
+
+                # Backtrack
+                stats['backtracks'] += 1
+                grid[:] = grid_backup
+                candidates[:] = candidates_backup
+
+            return False
+
+        result = solve_recursive()
+        if result:
+            self.grid[:] = grid
+
+        return result
+
+    def solve_constraint_propagation_with_steps(self):
+        """Generator-based constraint propagation for step-by-step animation.
+
+        Yields after each constraint application or guess.
+
+        Yields: None after each step
+        Returns: True if solved, False if unsolvable
+        """
+        grid = [row[:] for row in self.grid]
+        candidates = self._build_candidates(grid)
+        stats = {'constraints_applied': 0, 'backtracks': 0}
+
+        def solve_recursive():
+            nonlocal grid, candidates
+
+            # Apply constraints
+            grid, candidates = self._apply_constraint_rules(grid, candidates, stats)
+            yield
+
+            # Check for contradiction
+            for i in range(9):
+                for j in range(9):
+                    if grid[i][j] == 0 and candidates[i][j] is not None:
+                        if len(candidates[i][j]) == 0:
+                            return False
+
+            # Check if complete
+            if all(grid[i][j] != 0 for i in range(9) for j in range(9)):
+                return True
+
+            # MRV heuristic
+            min_candidates = None
+            min_cell = None
+            for i in range(9):
+                for j in range(9):
+                    if grid[i][j] == 0 and candidates[i][j]:
+                        if min_candidates is None or len(candidates[i][j]) < len(min_candidates):
+                            min_candidates = candidates[i][j]
+                            min_cell = (i, j)
+
+            if not min_cell:
+                return False
+
+            # Try each candidate
+            i, j = min_cell
+            for num in sorted(min_candidates):
+                grid_backup = [row[:] for row in grid]
+                candidates_backup = [[cell.copy() if cell else None for cell in row]
+                                    for row in candidates]
+
+                grid[i][j] = num
+                candidates[i][j] = None
+                for pi, pj in self._get_unit_peers(i, j):
+                    if candidates[pi][pj]:
+                        candidates[pi][pj].discard(num)
+
+                yield
+
+                if (yield from solve_recursive()):
+                    return True
+
+                yield
+                stats['backtracks'] += 1
+                grid[:] = grid_backup
+                candidates[:] = candidates_backup
+
+            return False
+
+        result = yield from solve_recursive()
+        if result:
+            self.grid[:] = grid
+        return result

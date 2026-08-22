@@ -547,22 +547,26 @@ class SudokuGame:
         self.solver_total_pause = 0
         self.solver_final_time = None  # Reset frozen time for new solve
 
-        # Phase 8.1: Route to selected algorithm
-        # For Phase 8.1, all algorithms use backtracking
-        # (Phase 8.2/8.3 will implement constraint propagation and hybrid)
+        # Phase 8: Route to selected algorithm
         if self.algorithm_selected == SolveAlgorithm.BACKTRACK:
-            pass  # Use default backtracking path below
+            if animated:
+                self.solver_gen = self._solve_with_steps()
+                self.message = "Solving... (Press SPACE to pause, ESC to stop)"
+            else:
+                self.solve_fast_complete()
         elif self.algorithm_selected == SolveAlgorithm.CONSTRAINT_PROPAGATION:
-            pass  # TODO: Phase 8.2 - implement constraint propagation
+            if animated:
+                self.solver_gen = self.solver.solve_constraint_propagation_with_steps()
+                self.message = "Solving... (Press SPACE to pause, ESC to stop)"
+            else:
+                self.solver.solve_constraint_propagation()
         elif self.algorithm_selected == SolveAlgorithm.HYBRID:
-            pass  # TODO: Phase 8.3 - implement hybrid logic
-
-        if animated:
-            self.solver_gen = self._solve_with_steps()
-            self.message = "Solving... (Press SPACE to pause, ESC to stop)"
-        else:
-            # Fast solve: run to completion immediately
-            self.solve_fast_complete()
+            # TODO: Phase 8.3 - implement hybrid logic
+            if animated:
+                self.solver_gen = self._solve_with_steps()
+                self.message = "Solving... (Press SPACE to pause, ESC to stop)"
+            else:
+                self.solve_fast_complete()
 
     def get_solver_elapsed_time(self):
         """Get elapsed time since solver started (excluding pauses).
