@@ -6,11 +6,21 @@ Pure algorithm logic (no Pygame dependency).
 - Validation logic
 - Puzzle generation
 - Puzzle I/O (save/load)
+- Phase 7: Puzzle validation and state management
 """
 
 import json
 import random
 from pathlib import Path
+from enum import Enum
+
+
+class PuzzleState(Enum):
+    """Puzzle validation state (Phase 7)"""
+    INVALID = "INVALID"                          # RED - Has conflicts
+    NOT_SOLVABLE = "NOT_SOLVABLE"                # RED - No solution exists
+    MULTIPLE_SOLUTIONS = "MULTIPLE_SOLUTIONS"    # AMBER - Multiple solutions
+    SINGLE_SOLUTION = "SINGLE_SOLUTION"          # GREEN - Exactly one solution
 
 
 def generate_complete_grid():
@@ -311,3 +321,93 @@ class SudokuSolver:
 
         result = yield from backtrack()
         return result
+
+    def count_solutions(self, limit=2):
+        """Count number of solutions (stop at limit for performance).
+
+        Args:
+            limit: Stop counting after finding this many solutions (default 2)
+                   - We only need to know: 0 (unsolvable), 1 (unique), 2+ (multiple)
+
+        Returns: Number of solutions found (capped at limit)
+        """
+        # Quick check: if grid has errors (duplicates), return 0 immediately
+        if self.find_errors():
+            return 0
+
+        solutions = []
+
+        def backtrack():
+            # Early exit: stop counting at limit (performance optimization)
+            if len(solutions) >= limit:
+                return
+
+            empty = self.find_empty_cell()
+            if not empty:
+                # Found a complete solution
+                solutions.append([row[:] for row in self.grid])
+                return
+
+            row, col = empty
+            for num in range(1, 10):
+                if self.is_valid_placement(row, col, num):
+                    self.grid[row][col] = num
+                    backtrack()
+                    self.grid[row][col] = 0
+
+        # Backup original grid
+        grid_backup = [row[:] for row in self.grid]
+
+        # Count solutions
+        backtrack()
+
+        # Restore original grid
+        self.grid[:] = grid_backup
+
+        return len(solutions)
+
+    def validate_puzzle(self):
+        """Validate puzzle and return (state, message, color).
+
+        Validates on 3 lenses:
+        1. Duplicate check (row/column/box conflicts)
+        2. Solvability (puzzle has at least one solution)
+        3. Solution uniqueness (puzzle has exactly one solution)
+
+        Returns: (PuzzleState enum, str message, tuple color (R,G,B))
+        """
+        # Step 1: Check for duplicates/conflicts
+        errors = self.find_errors()
+        if errors:
+            return (PuzzleState.INVALID,
+                    f"Found {len(errors)} conflict(s)!",
+                    (255, 0, 0))  # RED
+
+        # Step 2: Check if solvable
+        grid_backup = [row[:] for row in self.grid]
+        solver = SudokuSolver([row[:] for row in self.grid])
+
+        if not solver.solve_backtrack():
+            self.grid[:] = grid_backup
+            return (PuzzleState.NOT_SOLVABLE,
+                    "Puzzle is not solvable!",
+                    (255, 0, 0))  # RED
+
+        # Step 3: Check solution uniqueness
+        solver = SudokuSolver([row[:] for row in grid_backup])
+        num_solutions = solver.count_solutions(limit=2)
+
+        self.grid[:] = grid_backup
+
+        if num_solutions == 0:
+            return (PuzzleState.NOT_SOLVABLE,
+                    "Not solvable",
+                    (255, 0, 0))  # RED
+        elif num_solutions == 1:
+            return (PuzzleState.SINGLE_SOLUTION,
+                    "Valid puzzle - exactly one solution!",
+                    (0, 200, 0))  # GREEN
+        else:
+            return (PuzzleState.MULTIPLE_SOLUTIONS,
+                    f"Multiple solutions exist",
+                    (255, 165, 0))  # AMBER

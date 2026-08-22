@@ -115,9 +115,51 @@ Buttons (Material Design):
 - Modern theme support: Follows OS dark mode
 - Custom renderers: For advanced effects
 
-## Phase 7: Distribution & Auto-Update
+## Phase 7: Validation, Puzzle State & System Generation
 
-- **PHASE7_DISTRIBUTION_DESIGN.md** - Complete design for Tauri + GitHub Releases
+### Primary Documents (START HERE)
+
+1. **IMPLEMENTATION_PLAN_REQUIREMENTS.md** ⭐ **Overview**
+   - Based on sudoku-requirements.md
+   - Full 2-week implementation plan
+   - 6 major tasks (7.1-7.6)
+   - 14 days estimated effort
+   - Success criteria
+
+2. **PHASE7_DETAILED_TASKS.md** - Day-by-day breakdown
+   - All 11 individual tasks
+   - Specific code changes needed
+   - Checklist for each task
+   - Test cases included
+
+### What Phase 7 Implements
+
+- **Validation Engine** (3 days)
+  - Duplicate checking (already exists)
+  - Solvability checking
+  - Solution uniqueness checking
+  - 4 puzzle states: INVALID, NOT_SOLVABLE, MULTIPLE_SOLUTIONS, SINGLE_SOLUTION
+
+- **Puzzle State System** (2 days)
+  - Track puzzle state throughout game
+  - Finalize action freezes puzzle (read-only cells)
+  - Clear button unlocks
+  - UI reflects state (RED/AMBER/GREEN)
+
+- **System Generated Puzzles** (3 days)
+  - Generate with guaranteed single solution
+  - Auto-finalize when generated
+  - Correct difficulty ranges
+  - Algorithm-based difficulty measurement
+
+- **Algorithm Integration** (2 days)
+  - Foundation for Phase 8 (Algorithm Menu)
+  - Algorithm selection variable
+  - Route solver calls to selected algorithm
+
+### Related: Distribution & Auto-Update
+
+- **PHASE7_DISTRIBUTION_DESIGN.md** - Tauri + GitHub Releases (SEPARATE from validation work)
   - Auto-update architecture
   - Version management workflow
   - GitHub Actions CI/CD setup

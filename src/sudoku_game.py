@@ -18,7 +18,7 @@ try:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
-    from .solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
+    from .solver import SudokuSolver, PuzzleState, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from .ui import UIRenderer
     from .menu import MenuSystem
 except ImportError:
@@ -36,7 +36,7 @@ except ImportError:
         FONT_LARGE, FONT_MEDIUM, FONT_SMALL, FONT_MENU,
         lerp, ease_in_out, draw_progress_bar, draw_rounded_rect, interpolate_color
     )
-    from solver import SudokuSolver, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
+    from solver import SudokuSolver, PuzzleState, generate_puzzle, generate_complete_grid, save_puzzle, load_puzzle
     from ui import UIRenderer
     from menu import MenuSystem
 
@@ -113,6 +113,13 @@ class SudokuGame:
         self.message_animation_start = 0  # Tracks message slide-in timing
         self.last_frame_time = pygame.time.get_ticks()  # For delta time calculation
         self.delta_time = 0.016  # Frame time in seconds (16ms = 60 FPS)
+
+        # Phase 7.2: Puzzle State System
+        self.puzzle_state = PuzzleState.MULTIPLE_SOLUTIONS  # 4-state system (INVALID, NOT_SOLVABLE, MULTIPLE_SOLUTIONS, SINGLE_SOLUTION)
+        self.state_message = ""  # Message from validation
+        self.state_color = (255, 165, 0)  # Color code for state (AMBER by default)
+        self.finalized = False  # Whether puzzle has been finalized
+        self.state_solution_grid = None  # Solution found during validation
 
     def _process_menu_action(self, action):
         """Process menu action returned by MenuSystem.handle_click()"""
@@ -360,6 +367,12 @@ class SudokuGame:
 
         row, col = self.selected_cell
 
+        # Check if cell is frozen (Phase 7.2) — prevent modification
+        if (row, col) in self.frozen_cells:
+            self.message = "Cell is locked (finalized puzzle)"
+            self.message_color = ORANGE
+            return
+
         # Number keys (1-9)
         if pygame.K_1 <= key <= pygame.K_9:
             self.grid[row][col] = key - pygame.K_0
@@ -384,25 +397,37 @@ class SudokuGame:
     
     
     def finalize_puzzle(self):
-        """Validate the puzzle — check Sudoku rules first, then completeness"""
-        solver = SudokuSolver(self.grid)
-        errors = solver.find_errors()
+        """Validate puzzle using 3-lens validation system (Phase 7.2)
 
-        if errors:
-            self.error_cells = errors
-            self.message = f"Found {len(errors)} conflict(s)!"
-            self.message_color = RED
-        elif not solver.is_complete():
-            self.error_cells.clear()
-            self.message = "No conflicts, but puzzle is incomplete!"
-            self.message_color = RED
+        Returns (state, message, color) with 4 possible states:
+        - INVALID: RED - Has conflicts
+        - NOT_SOLVABLE: RED - No solution exists
+        - MULTIPLE_SOLUTIONS: AMBER - Multiple solutions (caution)
+        - SINGLE_SOLUTION: GREEN - Exactly one solution (valid)
+        """
+        solver = SudokuSolver(self.grid)
+        state, message, color = solver.validate_puzzle()
+
+        # Update state variables
+        self.puzzle_state = state
+        self.state_message = message
+        self.state_color = color
+        self.message = message
+        self.message_color = color
+
+        # Only RED states are errors
+        if state in [PuzzleState.INVALID, PuzzleState.NOT_SOLVABLE]:
+            self.error_cells = solver.find_errors()
+            self.finalized = False
         else:
+            # AMBER or GREEN - puzzle is valid (may have multiple solutions but solvable)
             self.error_cells.clear()
-            self.message = "Congratulations! Puzzle solved correctly!"
-            self.message_color = GREEN
+            self.finalized = True
+            # Store solution for later reference
+            self.state_solution_grid = [row[:] for row in solver.grid]
     
     def clear_grid(self):
-        """Clear the entire grid"""
+        """Clear the entire grid and reset puzzle state"""
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
         self.frozen_cells.clear()
         self.selected_cell = (0, 0)  # Auto-select top-left
@@ -415,6 +440,12 @@ class SudokuGame:
         self.show_final_panel = False
         self.solver_start_time = None
         self.solver_final_time = None
+        # Reset puzzle state (Phase 7.2)
+        self.puzzle_state = PuzzleState.MULTIPLE_SOLUTIONS
+        self.state_message = ""
+        self.state_color = (255, 165, 0)
+        self.finalized = False
+        self.state_solution_grid = None
     
     def solve_puzzle(self, animated=True):
         """Start solving: animated step-by-step or fast"""
