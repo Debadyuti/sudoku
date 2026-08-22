@@ -126,17 +126,19 @@ class TestPuzzleGenerationThreading:
         assert thread1 != thread2
 
     def test_generation_sets_message_in_progress(self):
-        """While generating, message should show spinner and elapsed time"""
+        """While generating, flag should be set"""
         game = SudokuGame()
+
+        assert game.generating_puzzle is False
 
         game._start_puzzle_generation('easy')
 
-        # First check should show "Generating..."
-        assert "Generating" in game.message or game.message == ""
+        # After starting, flag should be set
+        assert game.generating_puzzle is True
+        # Spinner message appears in main game loop (line ~800 in run())
 
-        # After a moment, message should update with spinner and time
+        # Wait for generation to complete
         time.sleep(0.5)
-        # (Spinner update happens in main game loop, not here)
 
     def test_generation_handles_error(self):
         """If generation fails, error should be shown"""
