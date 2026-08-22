@@ -96,6 +96,8 @@ class SudokuGame:
         self.last_backtrack_count = 0
         self.step_pulse_time = 0
         self.backtrack_pulse_time = 0
+        self.spinner_frame = 0  # Stable spinner frame counter
+        self.last_spinner_update = 0  # Track spinner updates
 
         # Animation state (Phase 3: Animation Framework)
         self.animations = {}  # {(row,col): {'start_time': ms, 'duration': ms, 'type': 'highlight'}}
@@ -794,9 +796,15 @@ class SudokuGame:
                     else:
                         # Still generating - show spinner with elapsed time
                         elapsed_seconds = time.time() - self.generation_start_time
+
+                        # Update spinner frame only 4 times per second (every 250ms)
+                        # This prevents message from being re-rendered every frame
+                        if current_time - self.last_spinner_update >= 250:
+                            self.spinner_frame = (self.spinner_frame + 1) % 4
+                            self.last_spinner_update = current_time
+
                         spinner_chars = ['|', '/', '-', '\\']
-                        spinner_index = int(elapsed_seconds * 4) % len(spinner_chars)
-                        spinner = spinner_chars[spinner_index]
+                        spinner = spinner_chars[self.spinner_frame]
                         self.message = f"{spinner} Generating puzzle... ({elapsed_seconds:.1f}s)"
                         self.message_color = BLUE
 

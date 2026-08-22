@@ -243,7 +243,16 @@ class UIRenderer:
             # Draw background box with better styling
             padding = 10
             bg_x = MARGIN + x_offset
-            bg_rect = pygame.Rect(bg_x, MESSAGE_Y, text.get_width() + 2 * padding, text.get_height() + 2 * padding)
+            bg_width = text.get_width() + 2 * padding
+
+            # Clamp message box to window bounds (prevent overflow)
+            max_x = WIDTH - 10  # Leave 10px margin on right
+            if bg_x + bg_width > max_x:
+                bg_x = max_x - bg_width
+            if bg_x < MARGIN:
+                bg_x = MARGIN
+
+            bg_rect = pygame.Rect(bg_x, MESSAGE_Y, bg_width, text.get_height() + 2 * padding)
 
             # Apply opacity via surface
             bg_color = (248, 248, 250)
@@ -265,7 +274,7 @@ class UIRenderer:
             border_color = tuple(int(c * opacity_factor + 220 * (1 - opacity_factor)) for c in (180, 180, 200))
             pygame.draw.rect(self.screen, border_color, bg_rect, 2)
 
-            # Draw text with fading
+            # Draw text with fading (use clamped bg_x position)
             text_color = tuple(int(c * opacity_factor + 255 * (1 - opacity_factor)) for c in message_color)
             faded_text = FONT_SMALL.render(message, True, text_color)
             self.screen.blit(faded_text, (bg_x + padding, MESSAGE_Y + padding))
