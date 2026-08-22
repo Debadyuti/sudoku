@@ -547,6 +547,9 @@ class SudokuGame:
         self.solver_total_pause = 0
         self.solver_final_time = None  # Reset frozen time for new solve
 
+        # Create fresh solver for this solve session
+        self.solver = SudokuSolver([row[:] for row in self.grid])
+
         # Phase 8: Route to selected algorithm
         if self.algorithm_selected == SolveAlgorithm.BACKTRACK:
             if animated:
@@ -559,7 +562,19 @@ class SudokuGame:
                 self.solver_gen = self.solver.solve_constraint_propagation_with_steps()
                 self.message = "Solving... (Press SPACE to pause, ESC to stop)"
             else:
-                self.solver.solve_constraint_propagation()
+                # Fast CP solve
+                result = self.solver.solve_constraint_propagation()
+                self.solving = False
+                if self.solver_start_time is not None:
+                    self.solver_final_time = self.get_solver_elapsed_time()
+                if result:
+                    self.message = "Puzzle solved! (Constraint Propagation)"
+                    self.message_color = GREEN
+                    self.show_final_panel = True
+                else:
+                    self.message = "No solution exists!"
+                    self.message_color = RED
+                    self.show_final_panel = True
         elif self.algorithm_selected == SolveAlgorithm.HYBRID:
             # TODO: Phase 8.3 - implement hybrid logic
             if animated:
